@@ -647,6 +647,23 @@ function isMobileView() {
     return window.matchMedia('(max-width: 1023px)').matches;
 }
 
+const desktopLayoutQuery = window.matchMedia('(min-width: 1024px)');
+
+function syncPresetLocation() {
+    const wrapper = $('presetWrapper');
+    const headerSlot = $('headerPresetSlot');
+    const sidebarSlot = $('presetSlotSidebar');
+    if (!wrapper || !headerSlot || !sidebarSlot) return;
+    const target = desktopLayoutQuery.matches ? headerSlot : sidebarSlot;
+    if (wrapper.parentElement !== target) target.appendChild(wrapper);
+}
+
+if (desktopLayoutQuery.addEventListener) {
+    desktopLayoutQuery.addEventListener('change', syncPresetLocation);
+} else {
+    desktopLayoutQuery.addListener(syncPresetLocation);
+}
+
 function openMobileSidebar() {
     const sidebar = $('sidebar');
     sidebar.classList.add('sidebar-mobile-open');
@@ -879,6 +896,7 @@ function restoreState() {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+    syncPresetLocation();
     restoreState();
     initDragAndDrop();
     const savedInput = (function () {

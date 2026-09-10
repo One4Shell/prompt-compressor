@@ -214,6 +214,11 @@
             </button>
         </div>
 
+        <!-- Mobile Preset Slot (popolato via JS sotto i 1024px) -->
+        <div id="presetSlotSidebar" class="lg:hidden p-3 border-b border-darkborder/60 bg-slate-900/40 shrink-0">
+            <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">Prompt Demo</span>
+        </div>
+
         <!-- Sidebar Actions Bar -->
         <div class="sidebar-hide-collapsed p-3 border-b border-darkborder/60 bg-slate-900/40 flex items-center justify-between gap-2 shrink-0">
             <button onclick="toggleAllModules(true)" class="sidebar-text text-[11px] font-semibold text-brand-400 hover:text-brand-300 transition flex items-center gap-1">
@@ -510,34 +515,36 @@
     <div class="flex-1 flex flex-col h-screen overflow-hidden bg-darkbg">
 
         <!-- Top Header Navigation -->
-        <header class="border-b border-darkborder bg-darkcard/90 backdrop-blur h-14 shrink-0 px-4 flex items-center justify-between gap-3 z-20">
-            <div class="flex items-center gap-3">
-                <button onclick="openMobileSidebar()" id="mobileMenuBtn" class="lg:hidden w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-brand-600 text-slate-300 hover:text-white flex items-center justify-center transition border border-slate-700/60 shrink-0" title="Apri pannello moduli" aria-label="Apri pannello moduli">
+        <header class="border-b border-darkborder bg-darkcard/90 backdrop-blur h-14 shrink-0 px-3 sm:px-4 flex items-center justify-between gap-3 z-20">
+            <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <button onclick="openMobileSidebar()" id="mobileMenuBtn" class="lg:hidden w-9 h-9 rounded-lg bg-slate-800/80 hover:bg-brand-600 text-slate-300 hover:text-white flex items-center justify-center transition border border-slate-700/60 shrink-0" title="Apri pannello moduli" aria-label="Apri pannello moduli">
                     <i class="fa-solid fa-bars text-sm"></i>
                 </button>
-                <h1 class="font-bold text-sm sm:text-base text-white flex items-center gap-2 truncate">
-                    <i class="fa-solid fa-bolt text-brand-500 sm:hidden"></i>
-                    LLM Prompt Compressor
+                <h1 class="font-bold text-sm sm:text-base text-white flex items-center gap-2 min-w-0 truncate">
+                    <i class="fa-solid fa-bolt text-brand-500 sm:hidden shrink-0"></i>
+                    <span class="truncate">LLM Prompt Compressor</span>
                 </h1>
             </div>
 
-            <div class="flex items-center gap-2 sm:gap-3">
-                <!-- Preset Dropdown -->
-                <div class="relative inline-block text-left">
-                    <select id="presetSelect" onchange="loadPreset(this.value)" class="bg-slate-900/90 border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-brand-500 transition cursor-pointer max-w-[180px] sm:max-w-xs truncate">
-                        <option value="" disabled selected>⚡ Carica Prompt Demo...</option>
-                        <option value="system_mixed">Prompt Misto (Prosa + JSON + Logs)</option>
-                        <option value="caveman_prose">Prosa Logorroica (Caveman)</option>
-                        <option value="caveman_extra">Prosa con Intensificatori (Caveman++)</option>
-                        <option value="rtk_logs">Output Shell Logs (RTK)</option>
-                        <option value="headroom_json">Array JSON Strutturato (Headroom)</option>
-                        <option value="headroom_keys">JSON con Token/Base64 (Headroom++)</option>
-                        <option value="toon_mixed">JSON Annidato (TOON)</option>
-                        <option value="toon_keyed">Mappa JSON (TOON Keyed)</option>
-                    </select>
+            <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                <!-- Preset Dropdown (desktop only: su mobile viene spostato nella sidebar via JS) -->
+                <div id="headerPresetSlot" class="hidden lg:block">
+                    <div id="presetWrapper" class="relative inline-block text-left">
+                        <select id="presetSelect" onchange="loadPreset(this.value)" class="bg-slate-900/90 border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-2 lg:py-1.5 outline-none focus:border-brand-500 transition cursor-pointer w-full lg:w-auto lg:max-w-xs truncate">
+                            <option value="" disabled selected>⚡ Carica Prompt Demo...</option>
+                            <option value="system_mixed">Prompt Misto (Prosa + JSON + Logs)</option>
+                            <option value="caveman_prose">Prosa Logorroica (Caveman)</option>
+                            <option value="caveman_extra">Prosa con Intensificatori (Caveman++)</option>
+                            <option value="rtk_logs">Output Shell Logs (RTK)</option>
+                            <option value="headroom_json">Array JSON Strutturato (Headroom)</option>
+                            <option value="headroom_keys">JSON con Token/Base64 (Headroom++)</option>
+                            <option value="toon_mixed">JSON Annidato (TOON)</option>
+                            <option value="toon_keyed">Mappa JSON (TOON Keyed)</option>
+                        </select>
+                    </div>
                 </div>
 
-                <button onclick="clearAll()" class="px-2.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition flex items-center gap-1.5" title="Cancella tutto">
+                <button onclick="clearAll()" class="w-9 h-9 sm:w-auto sm:h-auto sm:px-2.5 sm:py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition flex items-center justify-center sm:gap-1.5 shrink-0" title="Cancella tutto">
                     <i class="fa-solid fa-trash-can text-slate-400"></i>
                     <span class="hidden sm:inline">Pulisci</span>
                 </button>
