@@ -252,9 +252,9 @@
                 <i class="fa-solid fa-gauge-high text-[10px] text-brand-400"></i>
             </div>
             <div class="grid grid-cols-3 gap-1">
-                <button id="agg_light" onclick="applyAggression('light')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700">Leggera</button>
-                <button id="agg_medium" onclick="applyAggression('medium')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-brand-600 text-white border border-brand-500/50">Media</button>
-                <button id="agg_extreme" onclick="applyAggression('extreme')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700">Estrema</button>
+                <button id="agg_light" onclick="applyPreset('light')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700">Leggera</button>
+                <button id="agg_medium" onclick="applyPreset('medium')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-brand-600 text-white border border-brand-500/50">Media</button>
+                <button id="agg_extreme" onclick="applyPreset('extreme')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700">Estrema</button>
             </div>
         </div>
 
@@ -512,7 +512,7 @@
                     <i id="customRulesIcon" class="fa-solid fa-chevron-down text-slate-500 text-[10px]"></i>
                 </button>
                 <div id="customRulesPanel" class="hidden mt-2 space-y-1.5">
-                    <input type="text" id="customWords" oninput="scheduleProcess(); saveState()" placeholder="es. urgente, importante, bozza" class="w-full bg-slate-900 text-xs border border-slate-700 rounded-lg p-2 text-slate-200 outline-none focus:border-brand-500">
+                    <input type="text" id="customWords" oninput="onCustomWordsChange()" placeholder="es. urgente, importante, bozza" class="w-full bg-slate-900 text-xs border border-slate-700 rounded-lg p-2 text-slate-200 outline-none focus:border-brand-500">
                     <p class="text-[9px] text-slate-500">Termini separati da virgola rimossi.</p>
                 </div>
             </div>
@@ -616,7 +616,7 @@
                             <span id="savedCost" class="text-sm font-bold font-mono text-amber-300">$0.00</span>
                         </div>
                         <div class="flex flex-col items-end gap-1 min-w-0 max-w-full flex-1 sm:flex-none">
-                            <select id="costModel" onchange="onOptionChange()" class="w-full sm:w-auto max-w-full truncate bg-slate-900 text-slate-200 text-[9px] rounded px-1 py-0.5 border border-slate-700 outline-none cursor-pointer">
+                            <select id="costModel" onchange="onCostChange()" class="w-full sm:w-auto max-w-full truncate bg-slate-900 text-slate-200 text-[9px] rounded px-1 py-0.5 border border-slate-700 outline-none cursor-pointer">
                                 <option value="gpt4o" selected>GPT-4o ($2.50)</option>
                                 <option value="gpt4o-mini">GPT-4o mini ($0.15)</option>
                                 <option value="claude35-sonnet">Claude 3.5 Sonnet ($3.00)</option>
@@ -626,7 +626,7 @@
                                 <option value="llama70b">Llama 3.1 70B ($0.90)</option>
                             </select>
                             <div class="flex items-center gap-1 text-[9px] text-slate-500 shrink-0">
-                                <input type="number" id="costRequests" value="10000" min="1" step="1000" onchange="onOptionChange()" class="w-14 shrink-0 bg-slate-900 text-slate-300 text-[9px] rounded px-1 py-0.5 border border-slate-700 outline-none focus:border-brand-500">
+                                <input type="number" id="costRequests" value="10000" min="1" step="1000" onchange="onCostChange()" class="w-14 shrink-0 bg-slate-900 text-slate-300 text-[9px] rounded px-1 py-0.5 border border-slate-700 outline-none focus:border-brand-500">
                                 <span class="shrink-0">richieste</span>
                             </div>
                         </div>

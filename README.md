@@ -92,7 +92,7 @@ Campo in sidebar per termini separati da virgola. Ogni termine viene rimosso com
 
 ### OmniGlyph
 
-Compressione del contesto come immagine. Esegue il rendering dell'output compresso (prompt di sistema, documentazione strumenti, cronologia densa) come pagine PNG compatte che il modello vision legge al posto del testo. I token immagine vengono fatturati in base alle dimensioni anziché ai caratteri — `(larghezza × altezza) / 750` per pagina — quindi il blocco convertito costa sensibilmente meno. **Solo route Anthropic diretta**; disattivato di default in tutti i profili di aggressività.
+Compressione del contesto come immagine. Esegue il rendering dell'output compresso (prompt di sistema, documentazione strumenti, cronologia densa) come pagine PNG compatte che il modello vision legge al posto del testo. I token immagine vengono fatturati in base alle dimensioni anziché ai caratteri — `(larghezza × altezza) / 750` per pagina — quindi il blocco convertito costa sensibilmente meno. **Solo route Anthropic diretta**. Nei profili di aggressività e in modalità Automatica OmniGlyph viene valutato automaticamente sull'input corrente: viene attivato solo se riduce davvero i token (con la densità migliore), altrimenti resta spento.
 
 Quando OmniGlyph è attivo, prima del rendering il testo viene ottimizzato **solo per l'immagine** (l'output testuale della pipeline resta invariato): i blocchi JSON vengono minificati — indentazione e fence ```json rimossi, con fallback silenzioso su JSON non valido — e lo spreco whitespace viene eliminato (trailing space, righe vuote multiple collassate). Nessun conflitto con Headroom: se il JSON è già stato convertito in CSV/TOON il contenuto passa invariato.
 
@@ -104,13 +104,13 @@ Le pagine sono ottimizzate per la pipeline vision di Claude: 1152×998 px (~1,15
 
 ## Aggressività
 
-Il profilo di aggressione imposta un sottoinsieme delle opzioni sopra:
+Il profilo di aggressione imposta un sottoinsieme delle opzioni sopra e rivaluta **OmniGlyph** sull'input corrente (attivo solo se conveniente):
 
 - **Leggera**: comportamento v2 (pulizie sicure)
 - **Media**: aggiunge intensificatori, tronca hash/base64, collassa contatori (default)
 - **Estrema**: attiva tutto, incluso Prose Compress, stack-trace, scarta chiavi JSON, telegrafico, strip markdown/HTML e **delimiter TOON a Tab**
 
-Dopo aver scelto un profilo puoi comunque rifinire le singole opzioni a mano.
+Il pulsante **Automatico** e le pill di aggressività restano evidenziati finché la configurazione coincide col preset: appena modifichi a mano un parametro (switch, select, parole/regex, moduli) il preset si spegne, e se un preset è attivo OmniGlyph viene rivalutato a ogni cambio dell'input. Dopo aver scelto un profilo puoi comunque rifinire le singole opzioni a mano.
 
 ## Metriche
 

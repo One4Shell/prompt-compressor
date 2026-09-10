@@ -239,6 +239,7 @@ const MODULE_IDS = ['lite', 'caveman', 'rtk', 'headroom', 'toon', 'prose', 'omni
 
 let isSidebarCollapsed = false;
 let currentAggression = 'medium';
+let lastPresetOmni = { preset: null, raw: null };
 let toonAutoDisabled = false;
 let debounceTimer = null;
 let outputView = 'text';
@@ -367,6 +368,7 @@ function syncModuleStates() {
 function processPrompt() {
     const t0 = performance.now();
     const rawText = $('rawInput').value;
+    applyPresetOmniGlyph();
     const opts = readOptions({ toonDisabled: false });
 
     const activeBadgesContainer = $('activeBadges');
@@ -659,8 +661,20 @@ function initDragAndDrop() {
 }
 
 function onOptionChange() {
+    markCustomPreset();
     processPrompt();
     saveState();
+}
+
+function onCostChange() {
+    processPrompt();
+    saveState();
+}
+
+function onCustomWordsChange() {
+    markCustomPreset();
+    scheduleProcess();
+    scheduleSave();
 }
 
 function updateMetrics(raw, comp) {
@@ -761,7 +775,51 @@ function analyzeModules() {
     btn.innerHTML = '<i class="fa-solid fa-xmark text-[10px]"></i> Nascondi';
 }
 
-function applyAggression(level) {
+const PRESET_LEVELS = ['light', 'medium', 'extreme'];
+const AGG_BTN_ACTIVE = 'flex-1 py-1 text-[10px] font-semibold rounded-lg bg-brand-600 text-white border border-brand-500/50';
+const AGG_BTN_INACTIVE = 'flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700';
+const AUTO_BTN_BASE = 'sidebar-text text-[11px] font-semibold transition flex items-center gap-1';
+const AUTO_BTN_ACTIVE = `${AUTO_BTN_BASE} text-brand-300 bg-brand-500/15 border border-brand-500/40 rounded-md px-1.5 py-0.5`;
+const AUTO_BTN_INACTIVE = `${AUTO_BTN_BASE} text-brand-400 hover:text-brand-300`;
+
+function isPresetActive() {
+    return PRESET_LEVELS.includes(currentAggression) || currentAggression === 'auto';
+}
+
+function highlightAggression(level) {
+    PRESET_LEVELS.forEach(l => {
+        const btn = $(`agg_${l}`);
+        if (btn) btn.className = l === level ? AGG_BTN_ACTIVE : AGG_BTN_INACTIVE;
+    });
+}
+
+function clearAggressionHighlight() {
+    PRESET_LEVELS.forEach(l => {
+        const btn = $(`agg_${l}`);
+        if (btn) btn.className = AGG_BTN_INACTIVE;
+    });
+}
+
+function setAutoHighlight(on) {
+    const btn = $('autoBtn');
+    if (btn) btn.className = on ? AUTO_BTN_ACTIVE : AUTO_BTN_INACTIVE;
+}
+
+function clearAutoHighlight() {
+    setAutoHighlight(false);
+}
+
+// Un ritocco manuale a qualsiasi parametro invalida il preset attivo:
+// le pill e il pulsante Automatico si spengono.
+function markCustomPreset() {
+    if (!isPresetActive()) return;
+    currentAggression = 'custom';
+    lastPresetOmni = { preset: null, raw: null };
+    clearAggressionHighlight();
+    clearAutoHighlight();
+}
+
+function applyAggressionProfile(level) {
     currentAggression = level;
     const profile = AGGRESSION[level] || AGGRESSION.medium;
     for (const id of Object.keys(profile)) {
@@ -773,23 +831,15 @@ function applyAggression(level) {
             el.checked = profile[id];
         }
     }
-    ['light', 'medium', 'extreme'].forEach(l => {
-        const btn = $(`agg_${l}`);
-        if (btn) {
-            btn.className = l === level
-                ? 'flex-1 py-1 text-[10px] font-semibold rounded-lg bg-brand-600 text-white border border-brand-500/50'
-                : 'flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700';
-        }
-    });
-    saveState();
-    processPrompt();
+    highlightAggression(level);
+    clearAutoHighlight();
 }
 
-function clearAggressionHighlight() {
-    ['light', 'medium', 'extreme'].forEach(l => {
-        const btn = $(`agg_${l}`);
-        if (btn) btn.className = 'flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700';
-    });
+function applyPreset(level) {
+    applyAggressionProfile(level);
+    lastPresetOmni = { preset: null, raw: null };
+    processPrompt();
+    saveState();
 }
 
 function autoCombosFor(module) {
@@ -871,6 +921,33 @@ function chooseOmniGlyph(rawText, flat, textTokens, words) {
     return bestDensity ? { density: bestDensity, tokens: bestTokens } : null;
 }
 
+// Quando un preset (pill di aggressività o Automatico) è attivo, OmniGlyph
+// viene rivalutato sull'input corrente: attivo solo se riduce i token.
+// La cache evita ricalcoli ripetuti a parità di preset+input.
+function applyPresetOmniGlyph() {
+    if (!isPresetActive()) return;
+    const rawText = $('rawInput').value;
+    if (lastPresetOmni.preset === currentAggression && lastPresetOmni.raw === rawText) return;
+    lastPresetOmni = { preset: currentAggression, raw: rawText };
+    if (!rawText || !rawText.trim()) {
+        writeFlatState({ mod_omniglyph: false });
+        syncModuleStates();
+        return;
+    }
+    const words = $('customWords').value.split(',').map(w => w.trim()).filter(Boolean);
+    const baseFlat = Object.assign({}, readFlatState(), { mod_omniglyph: false });
+    const baseOpts = flatToOpts(baseFlat, { toonDisabled: false, words });
+    const out = CompressorModules.runAll(rawText, baseOpts, () => {});
+    const textTokens = CompressorTokenizer.count(out);
+    const glyph = chooseOmniGlyph(rawText, baseFlat, textTokens, words);
+    if (glyph) {
+        writeFlatState({ mod_omniglyph: true, omniglyph_density: glyph.density });
+    } else {
+        writeFlatState({ mod_omniglyph: false });
+    }
+    syncModuleStates();
+}
+
 function applyAutoMode() {
     const rawText = $('rawInput').value;
     if (!rawText.trim()) {
@@ -910,7 +987,8 @@ function applyAutoMode() {
 
         currentAggression = 'auto';
         writeFlatState(result.flat);
-        clearAggressionHighlight();
+        setAutoHighlight(true);
+        lastPresetOmni = { preset: 'auto', raw: rawText };
         syncModuleStates();
         saveState();
         processPrompt();
@@ -1002,6 +1080,7 @@ function clearAll() {
 }
 
 function toggleAllModules(enable) {
+    markCustomPreset();
     ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom', 'mod_toon', 'mod_prose', 'mod_omniglyph'].forEach(id => {
         const el = $(id);
         if (el) el.checked = enable;
@@ -1163,10 +1242,18 @@ function restoreState() {
     }
 
     if (state) {
-        const isAuto = state.aggression === 'auto';
-        if (!isAuto && state.aggression && AGGRESSION[state.aggression]) currentAggression = state.aggression;
-        applyAggression(currentAggression);
-        if (isAuto) clearAggressionHighlight();
+        const agg = state.aggression;
+        if (agg && AGGRESSION[agg]) {
+            applyAggressionProfile(agg);
+        } else if (agg === 'auto') {
+            currentAggression = 'auto';
+            clearAggressionHighlight();
+            setAutoHighlight(true);
+        } else {
+            currentAggression = 'custom';
+            clearAggressionHighlight();
+            clearAutoHighlight();
+        }
         for (const cb of CHECKBOXES) {
             if (state[cb.id] !== undefined) cb.checked = state[cb.id];
         }
@@ -1182,7 +1269,7 @@ function restoreState() {
         }
         syncModuleStates();
     } else {
-        applyAggression('medium');
+        applyAggressionProfile('medium');
     }
     return state;
 }
