@@ -117,10 +117,9 @@ window.OmniGlyph = (function () {
         return AUTO_MIN_PX;
     }
 
-    function render(text, densityKey) {
-        if (!text || !text.trim()) {
-            return { pages: [], tokens: 0, pageTokens: pageTokens() };
-        }
+    // Calcola il piano di impaginazione (font, righe, pagine) senza
+    // disegnare: usato sia dal render sia dalla stima leggera dei token.
+    function plan(text, densityKey) {
         const prep = prepare(text);
         const probe = makeCanvas();
         const probeCtx = probe.getContext('2d');
@@ -129,6 +128,23 @@ window.OmniGlyph = (function () {
             : (DENSITIES[densityKey] || DENSITIES.compact);
         const { lines, lineH, linesPerPage } = layout(prep, probeCtx, fontPx);
         const totalPages = Math.max(1, Math.ceil(lines.length / linesPerPage));
+        return { fontPx, lines, lineH, linesPerPage, totalPages, tokens: totalPages * pageTokens() };
+    }
+
+    // Stima i token immagine di una densita' senza generare le canvas.
+    function measure(text, densityKey) {
+        if (!text || !text.trim()) {
+            return { pages: 0, tokens: 0, pageTokens: pageTokens(), fontPx: 0 };
+        }
+        const p = plan(text, densityKey);
+        return { pages: p.totalPages, tokens: p.tokens, pageTokens: pageTokens(), fontPx: p.fontPx };
+    }
+
+    function render(text, densityKey) {
+        if (!text || !text.trim()) {
+            return { pages: [], tokens: 0, pageTokens: pageTokens() };
+        }
+        const { fontPx, lines, lineH, linesPerPage, totalPages } = plan(text, densityKey);
         const pages = [];
 
         for (let p = 0; p < totalPages; p++) {
@@ -162,5 +178,5 @@ window.OmniGlyph = (function () {
         });
     }
 
-    return { render, prepare, estimateTokens, pageTokens, toBlob, DENSITIES, PAGE_W, PAGE_H };
+    return { render, measure, prepare, estimateTokens, pageTokens, toBlob, DENSITIES, PAGE_W, PAGE_H };
 })();

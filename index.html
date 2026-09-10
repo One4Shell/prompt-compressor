@@ -221,8 +221,8 @@
 
         <!-- Sidebar Actions Bar -->
         <div class="sidebar-hide-collapsed p-3 border-b border-darkborder/60 bg-slate-900/40 flex items-center justify-between gap-2 shrink-0">
-            <button onclick="toggleAllModules(true)" class="sidebar-text text-[11px] font-semibold text-brand-400 hover:text-brand-300 transition flex items-center gap-1">
-                <i class="fa-solid fa-check-double text-[10px]"></i> Abilita tutti
+            <button id="autoBtn" onclick="applyAutoMode()" class="sidebar-text text-[11px] font-semibold text-brand-400 hover:text-brand-300 transition flex items-center gap-1">
+                <i id="autoBtnIcon" class="fa-solid fa-wand-magic-sparkles text-[10px]"></i> Automatico
             </button>
             <button onclick="toggleAllModules(false)" class="sidebar-text text-[11px] text-slate-400 hover:text-slate-200 transition flex items-center gap-1">
                 Disabilita tutti

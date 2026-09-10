@@ -191,6 +191,37 @@ const AGGRESSION = {
     }
 };
 
+// Spazio di ricerca del bottone Automatico. Solo le opzioni "sicure" (senza
+// rimozione di contenuto informativo) vengono enumerate per combinazione;
+// le opzioni distruttive restano forzate OFF. Ogni voce elenca i checkbox di
+// un modulo e l'eventuale select (TOON delimiter) da provare.
+const AUTO_SEARCH_MODULES = [
+    { ids: ['mod_lite', 'lite_trim', 'lite_empty_lines', 'lite_markdown', 'lite_strip'], select: null },
+    { ids: ['mod_rtk', 'rtk_ansi', 'rtk_progress', 'rtk_dedupe'], select: null },
+    { ids: ['mod_headroom', 'headroom_minify', 'headroom_csv', 'headroom_hashes', 'headroom_base64'], select: null },
+    { ids: ['mod_toon'], select: { id: 'toon_delimiter', values: [',', '\t', '|'] } }
+];
+
+const AUTO_FORCED_OFF = [
+    'rtk_timestamps', 'rtk_counters', 'rtk_stacktrace',
+    'headroom_stripkeys',
+    'mod_caveman', 'caveman_fillers', 'caveman_articles', 'caveman_preps',
+    'caveman_telegraph', 'caveman_intensifiers',
+    'mod_prose', 'mod_omniglyph'
+];
+
+const AUTO_STATIC_IDS = ['caveman_lang', 'omniglyph_density', 'toon_delimiter'];
+
+const AUTO_OPTION_IDS = (() => {
+    const set = new Set(AUTO_STATIC_IDS);
+    AUTO_SEARCH_MODULES.forEach(m => {
+        m.ids.forEach(id => set.add(id));
+        if (m.select) set.add(m.select.id);
+    });
+    AUTO_FORCED_OFF.forEach(id => set.add(id));
+    return Array.from(set);
+})();
+
 const STAGE_INFO = {
     lite: { label: 'Lite Clean', cls: 'bg-sky-500/10 text-sky-400 border-sky-500/20', bar: 'bg-sky-500' },
     rtk: { label: 'RTK Filter', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', bar: 'bg-emerald-500' },
@@ -216,53 +247,82 @@ let glyphSeq = 0;
 
 function $(id) { return document.getElementById(id); }
 
-function readOptions() {
-    const words = $('customWords').value.split(',').map(w => w.trim()).filter(Boolean);
+const FLAT_SELECT_IDS = ['caveman_lang', 'toon_delimiter', 'omniglyph_density'];
+
+function readFlatState() {
+    const flat = {};
+    document.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        if (cb.id) flat[cb.id] = cb.checked;
+    });
+    FLAT_SELECT_IDS.forEach(id => {
+        const el = $(id);
+        if (el) flat[id] = el.value;
+    });
+    return flat;
+}
+
+function flatToOpts(flat, options) {
+    const opts = options || {};
+    const words = opts.words || $('customWords').value.split(',').map(w => w.trim()).filter(Boolean);
+    const toonDisabled = !!opts.toonDisabled;
     return {
         lite: {
-            on: $('mod_lite').checked,
-            trim: $('lite_trim').checked,
-            emptyLines: $('lite_empty_lines').checked,
-            markdown: $('lite_markdown').checked,
-            strip: $('lite_strip').checked
+            on: flat.mod_lite,
+            trim: flat.lite_trim,
+            emptyLines: flat.lite_empty_lines,
+            markdown: flat.lite_markdown,
+            strip: flat.lite_strip
         },
         rtk: {
-            on: $('mod_rtk').checked,
-            ansi: $('rtk_ansi').checked,
-            timestamps: $('rtk_timestamps').checked,
-            dedupe: $('rtk_dedupe').checked,
-            progress: $('rtk_progress').checked,
-            counters: $('rtk_counters').checked,
-            stacktrace: $('rtk_stacktrace').checked
+            on: flat.mod_rtk,
+            ansi: flat.rtk_ansi,
+            timestamps: flat.rtk_timestamps,
+            dedupe: flat.rtk_dedupe,
+            progress: flat.rtk_progress,
+            counters: flat.rtk_counters,
+            stacktrace: flat.rtk_stacktrace
         },
         headroom: {
-            on: $('mod_headroom').checked,
-            minify: $('headroom_minify').checked,
-            csv: $('headroom_csv').checked,
-            hashes: $('headroom_hashes').checked,
-            base64: $('headroom_base64').checked,
-            stripKeys: $('headroom_stripkeys').checked
+            on: flat.mod_headroom,
+            minify: flat.headroom_minify,
+            csv: flat.headroom_csv,
+            hashes: flat.headroom_hashes,
+            base64: flat.headroom_base64,
+            stripKeys: flat.headroom_stripkeys
         },
         toon: {
-            on: $('mod_toon').checked && !toonAutoDisabled,
-            delimiter: $('toon_delimiter').value
+            on: flat.mod_toon && !toonDisabled,
+            delimiter: flat.toon_delimiter
         },
         caveman: {
-            on: $('mod_caveman').checked,
-            lang: $('caveman_lang').value,
-            fillers: $('caveman_fillers').checked,
-            articles: $('caveman_articles').checked,
-            prepositions: $('caveman_preps').checked,
-            telegraph: $('caveman_telegraph').checked,
-            intensifiers: $('caveman_intensifiers').checked
+            on: flat.mod_caveman,
+            lang: flat.caveman_lang,
+            fillers: flat.caveman_fillers,
+            articles: flat.caveman_articles,
+            prepositions: flat.caveman_preps,
+            telegraph: flat.caveman_telegraph,
+            intensifiers: flat.caveman_intensifiers
         },
-        prose: { on: $('mod_prose').checked, lang: $('caveman_lang').value },
+        prose: { on: flat.mod_prose, lang: flat.caveman_lang },
         omniglyph: {
-            on: $('mod_omniglyph').checked,
-            density: $('omniglyph_density').value
+            on: flat.mod_omniglyph,
+            density: flat.omniglyph_density
         },
         custom: { on: words.length > 0, words }
     };
+}
+
+function writeFlatState(flat) {
+    for (const id of Object.keys(flat)) {
+        const el = $(id);
+        if (!el) continue;
+        if (el.type === 'checkbox') el.checked = !!flat[id];
+        else el.value = flat[id];
+    }
+}
+
+function readOptions() {
+    return flatToOpts(readFlatState(), { toonDisabled: toonAutoDisabled });
 }
 
 function syncModuleStates() {
@@ -675,6 +735,144 @@ function applyAggression(level) {
     processPrompt();
 }
 
+function clearAggressionHighlight() {
+    ['light', 'medium', 'extreme'].forEach(l => {
+        const btn = $(`agg_${l}`);
+        if (btn) btn.className = 'flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700';
+    });
+}
+
+function autoCombosFor(module) {
+    const n = module.ids.length;
+    const total = 1 << n;
+    const selectValues = module.select ? module.select.values : [null];
+    const combos = [];
+    for (let mask = 0; mask < total; mask++) {
+        for (const sel of selectValues) {
+            const combo = {};
+            module.ids.forEach((id, i) => { combo[id] = !!(mask & (1 << i)); });
+            if (module.select) combo[module.select.id] = sel;
+            combos.push(combo);
+        }
+    }
+    return combos;
+}
+
+function autoSeedFlat() {
+    const current = readFlatState();
+    const flat = {};
+    AUTO_OPTION_IDS.forEach(id => { flat[id] = current[id]; });
+    AUTO_SEARCH_MODULES.forEach(m => {
+        m.ids.forEach(id => { flat[id] = true; });
+        if (m.select) flat[m.select.id] = '\t';
+    });
+    AUTO_FORCED_OFF.forEach(id => { flat[id] = false; });
+    return flat;
+}
+
+function autoScore(rawText, flat, words, cache) {
+    const key = JSON.stringify(flat);
+    if (cache.has(key)) return cache.get(key);
+    const opts = flatToOpts(flat, { toonDisabled: false, words });
+    const out = CompressorModules.runAll(rawText, opts, () => {});
+    const tok = CompressorTokenizer.count(out);
+    cache.set(key, tok);
+    return tok;
+}
+
+function searchBestTextOptions(rawText, words) {
+    const cache = new Map();
+    let best = autoSeedFlat();
+    let bestTok = autoScore(rawText, best, words, cache);
+    const maxPasses = rawText.length > 120000 ? 1 : 3;
+    for (let pass = 0; pass < maxPasses; pass++) {
+        let improved = false;
+        for (const mod of AUTO_SEARCH_MODULES) {
+            for (const combo of autoCombosFor(mod)) {
+                const cand = Object.assign({}, best, combo);
+                const tok = autoScore(rawText, cand, words, cache);
+                if (tok < bestTok) {
+                    bestTok = tok;
+                    best = cand;
+                    improved = true;
+                }
+            }
+        }
+        if (!improved) break;
+    }
+    return { flat: best, tokens: bestTok, evaluations: cache.size };
+}
+
+function chooseOmniGlyph(rawText, flat, textTokens, words) {
+    if (!rawText || !rawText.trim()) return null;
+    const opts = flatToOpts(flat, { toonDisabled: false, words });
+    const out = CompressorModules.runAll(rawText, opts, () => {});
+    if (!out || !out.trim()) return null;
+    let bestDensity = null;
+    let bestTokens = textTokens;
+    for (const density of ['auto', 'readable', 'compact', 'dense']) {
+        let m;
+        try { m = OmniGlyph.measure(out, density); } catch (e) { continue; }
+        if (m.tokens > 0 && m.tokens < bestTokens) {
+            bestTokens = m.tokens;
+            bestDensity = density;
+        }
+    }
+    return bestDensity ? { density: bestDensity, tokens: bestTokens } : null;
+}
+
+function applyAutoMode() {
+    const rawText = $('rawInput').value;
+    if (!rawText.trim()) {
+        showToast("Inserisci un prompt prima di usare l'Automatico", true);
+        return;
+    }
+    const btn = $('autoBtn');
+    const icon = $('autoBtnIcon');
+    if (btn && btn.dataset.busy === '1') return;
+    if (btn) { btn.dataset.busy = '1'; btn.classList.add('opacity-60', 'pointer-events-none'); }
+    if (icon) icon.className = 'fa-solid fa-spinner fa-spin text-[10px]';
+    showToast('Calcolo configurazione ottimale...');
+
+    setTimeout(() => {
+        let result = null;
+        try {
+            const words = $('customWords').value.split(',').map(w => w.trim()).filter(Boolean);
+            const search = searchBestTextOptions(rawText, words);
+            const glyph = chooseOmniGlyph(rawText, search.flat, search.tokens, words);
+            const flat = Object.assign({}, search.flat);
+            let finalTokens = search.tokens;
+            if (glyph) {
+                flat.mod_omniglyph = true;
+                flat.omniglyph_density = glyph.density;
+                finalTokens = glyph.tokens;
+            } else {
+                flat.mod_omniglyph = false;
+            }
+            result = { flat, tokens: finalTokens, image: !!glyph };
+        } catch (err) {
+            console.error(err);
+        } finally {
+            if (btn) { delete btn.dataset.busy; btn.classList.remove('opacity-60', 'pointer-events-none'); }
+            if (icon) icon.className = 'fa-solid fa-wand-magic-sparkles text-[10px]';
+        }
+        if (!result) { showToast('Errore nel calcolo automatico', true); return; }
+
+        currentAggression = 'auto';
+        writeFlatState(result.flat);
+        clearAggressionHighlight();
+        syncModuleStates();
+        saveState();
+        processPrompt();
+
+        const origTok = CompressorTokenizer.count(rawText);
+        const saved = Math.max(0, origTok - result.tokens);
+        const pct = origTok > 0 ? Math.round((saved / origTok) * 100) : 0;
+        const mode = result.image ? ` · OmniGlyph (${result.flat.omniglyph_density})` : '';
+        showToast(`Auto: -${saved.toLocaleString()} tok (${pct}%)${mode}`);
+    }, 30);
+}
+
 function isMobileView() {
     return window.matchMedia('(max-width: 1023px)').matches;
 }
@@ -906,12 +1104,14 @@ function restoreState() {
     }
 
     if (state) {
-        if (state.aggression && AGGRESSION[state.aggression]) currentAggression = state.aggression;
+        const isAuto = state.aggression === 'auto';
+        if (!isAuto && state.aggression && AGGRESSION[state.aggression]) currentAggression = state.aggression;
         applyAggression(currentAggression);
+        if (isAuto) clearAggressionHighlight();
         document.querySelectorAll('input[type=checkbox]').forEach(cb => {
             if (state[cb.id] !== undefined) cb.checked = state[cb.id];
         });
-        ['caveman_lang', 'omniglyph_density', 'customWords', 'costModel', 'costRequests'].forEach(id => {
+        ['caveman_lang', 'toon_delimiter', 'omniglyph_density', 'customWords', 'costModel', 'costRequests'].forEach(id => {
             const el = $(id);
             if (el && state[id] !== undefined) el.value = state[id];
         });

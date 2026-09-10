@@ -7,6 +7,7 @@ L'elaborazione è **100% client-side**: il testo non lascia mai il browser.
 ## Caratteristiche
 
 - Compressione tramite 6 moduli indipendenti, attivabili/disattivabili singolarmente o in blocco
+- **Automatico**: calcola in un clic la combinazione di opzioni **sicure** che minimizza i token per l'input corrente (coordinate descent su tutte le combinazioni dei moduli Lite, RTK, Headroom e TOON, escludendo le trasformazioni che rimuovono contenuto informativo) e valuta se OmniGlyph conviene come immagine, mantenendo le guardie automatiche (es. TOON disattivato se aumenterebbe i token)
 - **OmniGlyph (opzionale)**: output della pipeline renderizzato come pagine PNG ottimizzate per i modelli vision (solo route Anthropic diretta)
 - **Contatore token reale BPE** (`cl100k_base` via `gpt-tokenizer`) con fallback automatico all'euristica `char/3.8` se offline
 - **Slider di aggressività** (Leggera / Media / Estrema) che applica profili di regole predefiniti
