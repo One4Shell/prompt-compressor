@@ -158,6 +158,35 @@
         .module-off .module-title { opacity: .45; }
         .module-card.module-off,
         .module-card.module-off:hover { border-color: rgba(27, 36, 54, .55); }
+
+        /* ===== Mobile off-canvas sidebar ===== */
+        @media (max-width: 1023px) {
+            #sidebar {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                width: 20rem;
+                max-width: 85vw;
+                z-index: 40;
+                transform: translateX(-100%);
+                transition: transform .3s cubic-bezier(.4, 0, .2, 1);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, .6);
+            }
+            #sidebar.sidebar-mobile-open { transform: translateX(0); }
+            #sidebar.sidebar-collapsed {
+                width: 20rem;
+                max-width: 85vw;
+            }
+        }
+
+        /* ===== Drag & drop highlight ===== */
+        #inputPanel.drag-active {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 1px #6366f1, inset 0 0 0 9999px rgba(99, 102, 241, .06);
+        }
+        #inputPanel.drag-active #dropHint { opacity: 1; }
+        #dropHint { transition: opacity .2s ease; }
     </style>
 </head>
 <body class="bg-darkbg text-slate-200 font-sans h-full min-h-screen flex overflow-hidden selection:bg-brand-500 selection:text-white">
@@ -474,12 +503,18 @@
         </div>
     </aside>
 
+    <!-- Mobile Sidebar Backdrop -->
+    <div id="sidebarBackdrop" onclick="closeMobileSidebar()" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-30 lg:hidden" aria-hidden="true"></div>
+
     <!-- ==================== MAIN WORKSPACE CONTAINER ==================== -->
     <div class="flex-1 flex flex-col h-screen overflow-hidden bg-darkbg">
 
         <!-- Top Header Navigation -->
         <header class="border-b border-darkborder bg-darkcard/90 backdrop-blur h-14 shrink-0 px-4 flex items-center justify-between gap-3 z-20">
             <div class="flex items-center gap-3">
+                <button onclick="openMobileSidebar()" id="mobileMenuBtn" class="lg:hidden w-8 h-8 rounded-lg bg-slate-800/80 hover:bg-brand-600 text-slate-300 hover:text-white flex items-center justify-center transition border border-slate-700/60 shrink-0" title="Apri pannello moduli" aria-label="Apri pannello moduli">
+                    <i class="fa-solid fa-bars text-sm"></i>
+                </button>
                 <h1 class="font-bold text-sm sm:text-base text-white flex items-center gap-2 truncate">
                     <i class="fa-solid fa-bolt text-brand-500 sm:hidden"></i>
                     LLM Prompt Compressor
@@ -611,13 +646,18 @@
                             Prompt Originale (Input)
                         </label>
                         <div class="flex items-center gap-2">
-                            <span id="inputCharCount" class="text-[11px] font-mono text-slate-400">0 car.</span>
+                            <span id="inputCharCount" class="text-[11px] font-mono text-slate-400">0 car. · 0 parole</span>
                             <button onclick="pasteFromClipboard()" class="text-xs text-brand-400 hover:text-brand-300 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition flex items-center gap-1" title="Incolla">
                                 <i class="fa-regular fa-paste text-[11px]"></i> <span class="hidden sm:inline">Incolla</span>
                             </button>
                         </div>
                     </div>
-                    <textarea id="rawInput" oninput="scheduleProcess()" placeholder="Inserisci o incolla qui il tuo prompt grezzo, la conversazione, i dati JSON o i log..." class="w-full flex-1 bg-slate-900/90 text-slate-200 font-mono text-xs sm:text-sm p-3 rounded-lg border border-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none leading-relaxed min-h-0"></textarea>
+                    <textarea id="rawInput" oninput="onInputChange()" placeholder="Inserisci o incolla qui il tuo prompt grezzo, la conversazione, i dati JSON o i log... (puoi anche trascinare un file di testo)" class="w-full flex-1 bg-slate-900/90 text-slate-200 font-mono text-xs sm:text-sm p-3 rounded-lg border border-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none leading-relaxed min-h-0"></textarea>
+                    <div id="dropHint" class="pointer-events-none absolute inset-0 rounded-xl flex items-center justify-center opacity-0 z-10">
+                        <div class="bg-brand-600/90 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg flex items-center gap-2">
+                            <i class="fa-solid fa-file-arrow-up"></i> Rilascia per caricare il testo
+                        </div>
+                    </div>
                 </div>
 
                 <!-- OUTPUT PANEL -->

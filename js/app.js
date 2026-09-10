@@ -421,6 +421,110 @@ function scheduleProcess() {
     debounceTimer = setTimeout(processPrompt, 150);
 }
 
+let saveTimer = null;
+
+function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, 600);
+}
+
+function updateInputCount(text) {
+    const el = $('inputCharCount');
+    if (!el) return;
+    const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+    el.innerText = `${text.length.toLocaleString()} car. · ${words.toLocaleString()} parole`;
+}
+
+function onInputChange() {
+    updateInputCount($('rawInput').value);
+    scheduleProcess();
+    scheduleSave();
+}
+
+const TEXT_EXTENSIONS = ['.txt', '.md', '.markdown', '.json', '.log', '.csv', '.yaml', '.yml', '.xml', '.html', '.htm', '.ini', '.conf', '.sql', '.py', '.js', '.ts', '.go', '.java', '.c', '.cpp', '.sh'];
+
+function isTextFile(file) {
+    if (!file) return false;
+    if (file.type && file.type.startsWith('text/')) return true;
+    const name = (file.name || '').toLowerCase();
+    return TEXT_EXTENSIONS.some(ext => name.endsWith(ext));
+}
+
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(reader.error || new Error('read error'));
+        reader.readAsText(file);
+    });
+}
+
+function insertDroppedText(text, fileCount) {
+    const input = $('rawInput');
+    if (!text) return;
+    const existing = input.value;
+    input.value = existing.trim() ? existing.replace(/\s*$/, '') + '\n\n' + text : text;
+    updateInputCount(input.value);
+    processPrompt();
+    saveState();
+    const label = fileCount
+        ? `${fileCount} file caricat${fileCount > 1 ? 'i' : 'o'}`
+        : 'Testo inserito';
+    showToast(`${label} nell'input!`);
+}
+
+async function handleDroppedData(dt) {
+    if (!dt) return;
+    const files = Array.from(dt.files || []);
+    if (files.length) {
+        const texts = [];
+        let count = 0;
+        for (const file of files) {
+            if (!isTextFile(file)) {
+                showToast(`File non supportato: ${file.name}`, true);
+                continue;
+            }
+            try {
+                texts.push(await readFileAsText(file));
+                count++;
+            } catch (err) {
+                showToast(`Errore nella lettura di ${file.name}`, true);
+            }
+        }
+        if (texts.length) insertDroppedText(texts.join('\n\n'), count);
+        return;
+    }
+    const text = dt.getData('text/plain');
+    if (text) insertDroppedText(text, 0);
+}
+
+function initDragAndDrop() {
+    const panel = $('inputPanel');
+    if (!panel) return;
+    let depth = 0;
+    const clear = () => { depth = 0; panel.classList.remove('drag-active'); };
+
+    panel.addEventListener('dragenter', e => {
+        e.preventDefault();
+        depth++;
+        panel.classList.add('drag-active');
+    });
+    panel.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+        panel.classList.add('drag-active');
+    });
+    panel.addEventListener('dragleave', () => {
+        depth--;
+        if (depth <= 0) clear();
+    });
+    panel.addEventListener('drop', e => {
+        e.preventDefault();
+        clear();
+        handleDroppedData(e.dataTransfer);
+    });
+}
+
 function onOptionChange() {
     processPrompt();
     saveState();
@@ -445,6 +549,7 @@ function updateMetrics(raw, comp) {
     $('savedTokens').innerText = `-${savedTok.toLocaleString()} tok`;
     $('savedCost').innerText = `$${savedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
     $('inputCharCount').innerText = `${raw.length} car.`;
+    updateInputCount(raw);
     $('outputCharCount').innerText = useImg ? `${glyphState.pages.length} pag` : `${comp.length} car.`;
 
     const modeEl = $('tokenizerMode');
@@ -538,7 +643,33 @@ function applyAggression(level) {
     processPrompt();
 }
 
+function isMobileView() {
+    return window.matchMedia('(max-width: 1023px)').matches;
+}
+
+function openMobileSidebar() {
+    const sidebar = $('sidebar');
+    sidebar.classList.add('sidebar-mobile-open');
+    sidebar.classList.remove('sidebar-collapsed');
+    sidebar.classList.add('sidebar-expanded');
+    $('sidebarBackdrop').classList.remove('hidden');
+}
+
+function closeMobileSidebar() {
+    const sidebar = $('sidebar');
+    sidebar.classList.remove('sidebar-mobile-open');
+    $('sidebarBackdrop').classList.add('hidden');
+    if (isSidebarCollapsed) {
+        sidebar.classList.remove('sidebar-expanded');
+        sidebar.classList.add('sidebar-collapsed');
+    }
+}
+
 function toggleSidebar() {
+    if (isMobileView()) {
+        closeMobileSidebar();
+        return;
+    }
     const sidebar = $('sidebar');
     const toggleIcon = $('sidebarToggleIcon');
     isSidebarCollapsed = !isSidebarCollapsed;
@@ -569,6 +700,7 @@ function loadPreset(key) {
 function clearAll() {
     $('rawInput').value = '';
     $('presetSelect').selectedIndex = 0;
+    updateInputCount('');
     processPrompt();
 }
 
@@ -709,6 +841,8 @@ function saveState() {
         const el = $(id);
         if (el) state[id] = el.value;
     });
+    const rawInput = $('rawInput');
+    if (rawInput && rawInput.value.length <= 200000) state.rawInput = rawInput.value;
     try {
         localStorage.setItem(STORE_KEY, JSON.stringify(state));
     } catch (e) {}
@@ -746,9 +880,30 @@ function restoreState() {
 
 window.addEventListener('DOMContentLoaded', () => {
     restoreState();
+    initDragAndDrop();
+    const savedInput = (function () {
+        try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { return null; }
+    })()?.rawInput;
     $('presetSelect').value = '';
-    loadPreset('system_mixed');
+    if (savedInput) {
+        $('rawInput').value = savedInput;
+        updateInputCount(savedInput);
+        processPrompt();
+    } else {
+        loadPreset('system_mixed');
+    }
     CompressorTokenizer.init().then(() => {
         updateMetrics($('rawInput').value, $('compressedOutput').value);
     });
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        closeMobileSidebar();
+        const panel = $('analysisPanel');
+        if (!panel.classList.contains('hidden')) {
+            panel.classList.add('hidden');
+            $('analyzeBtn').innerHTML = '<i class="fa-solid fa-chart-simple text-[10px]"></i> Analizza';
+        }
+    }
 });
