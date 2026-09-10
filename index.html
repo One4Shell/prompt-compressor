@@ -150,7 +150,7 @@
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
                         <input type="checkbox" id="lite_markdown" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Pulisci markdown vuoto (*, #)
+                        Pulisci markdown vuoto (*, _)
                     </label>
                 </div>
             </div>
@@ -597,8 +597,8 @@ Ti sarei davvero molto grato se potessi fornirmi anche degli esempi pratici di u
                     text = text.replace(/\n{3,}/g, '\n\n');
                 }
                 if (cleanMarkdown) {
-                    text = text.replace(/\*\*(\s*)\*\*/g, '')
-                              .replace(/__(\s*)__/g, '')
+                    text = text.replace(/\*\*([ \t]*)\*\*/g, '')
+                              .replace(/__([ \t]*)__/g, '')
                               .replace(/[-*_]{4,}/g, '---');
                 }
             }
@@ -617,7 +617,7 @@ Ti sarei davvero molto grato se potessi fornirmi anche degli esempi pratici di u
                     text = text.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-n]/g, '');
                 }
                 if (removeTimestamps) {
-                    text = text.replace(/\b\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?\b/gi, '')
+                    text = text.replace(/\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?\b/gi, '')
                               .replace(/\[\d{2}:\d{2}:\d{2}(\.\d+)?\]/g, '')
                               .replace(/\b\d{2}:\d{2}:\d{2}\b/g, '');
                 }
@@ -695,6 +695,14 @@ Ti sarei davvero molto grato se potessi fornirmi anche degli esempi pratici di u
                     return match;
                 });
 
+                const bareJson = text.trim();
+                if (bareJson.startsWith('[') || bareJson.startsWith('{')) {
+                    const processed = processJsonContent(bareJson);
+                    if (processed !== bareJson) {
+                        text = processed;
+                    }
+                }
+
                 if (truncateHashes) {
                     text = text.replace(/\b([a-f0-9]{32,64})\b/gi, (match) => match.substring(0, 8) + '...' + match.substring(match.length - 6));
                 }
@@ -736,8 +744,14 @@ Ti sarei davvero molto grato se potessi fornirmi anche degli esempi pratici di u
             if (customWordsInput) {
                 const words = customWordsInput.split(',').map(w => w.trim()).filter(Boolean);
                 words.forEach(w => {
-                    const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    text = text.replace(new RegExp(`\\b${esc}\\b`, 'gi'), '');
+                    let re;
+                    try {
+                        re = new RegExp(`\\b(${w})\\b`, 'gi');
+                    } catch (e) {
+                        const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                        re = new RegExp(`\\b${esc}\\b`, 'gi');
+                    }
+                    text = text.replace(re, '');
                 });
                 text = text.replace(/[ \t]{2,}/g, ' ');
             }
@@ -796,21 +810,110 @@ Ti sarei davvero molto grato se potessi fornirmi anche degli esempi pratici di u
                 return;
             }
 
-            const origWords = orig.split(/(\s+)/);
-            const compWords = new Set(comp.split(/(\s+)/));
+            const origLines = orig.split('\n');
+            const compLines = comp.split('\n');
 
-            let html = '';
-            origWords.forEach(word => {
-                if (word.trim() === '') {
-                    html += word;
-                } else if (compWords.has(word)) {
-                    html += escapeHtml(word);
-                } else {
-                    html += `<span class="diff-del">${escapeHtml(word)}</span>`;
-                }
-            });
-
+            let html;
+            if (origLines.length * compLines.length > 4000000) {
+                html = positionalDiff(origLines, compLines);
+            } else {
+                html = traceLines(origLines, compLines, lcsMatrix(origLines, compLines));
+            }
             diffViewer.innerHTML = html;
+        }
+
+        function lcsMatrix(a, b) {
+            const m = a.length, n = b.length;
+            const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+            for (let i = m - 1; i >= 0; i--) {
+                for (let j = n - 1; j >= 0; j--) {
+                    if (a[i] === b[j]) dp[i][j] = dp[i + 1][j + 1] + 1;
+                    else dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+                }
+            }
+            return dp;
+        }
+
+        function traceLines(a, b, dp) {
+            let i = 0, j = 0;
+            const m = a.length, n = b.length;
+            let html = '';
+            while (i < m && j < n) {
+                if (a[i] === b[j]) {
+                    html += escapeHtml(a[i]) + '\n';
+                    i++;
+                    j++;
+                } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+                    if (dp[i + 1][j] === dp[i][j + 1] && shareWord(a[i], b[j])) {
+                        html += renderWordDiff(a[i], b[j]) + '\n';
+                        i++;
+                        j++;
+                    } else {
+                        html += `<span class="diff-del">${escapeHtml(a[i])}</span>\n`;
+                        i++;
+                    }
+                } else {
+                    html += `<span class="diff-add">${escapeHtml(b[j])}</span>\n`;
+                    j++;
+                }
+            }
+            while (i < m) {
+                html += `<span class="diff-del">${escapeHtml(a[i])}</span>\n`;
+                i++;
+            }
+            while (j < n) {
+                html += `<span class="diff-add">${escapeHtml(b[j])}</span>\n`;
+                j++;
+            }
+            return html;
+        }
+
+        function shareWord(lineA, lineB) {
+            const wordsA = new Set(lineA.toLowerCase().split(/\s+/).filter(Boolean));
+            return lineB.toLowerCase().split(/\s+/).some(w => wordsA.has(w));
+        }
+
+        function renderWordDiff(lineA, lineB) {
+            const tokensA = lineA.split(/(\s+)/).filter(t => t !== '');
+            const tokensB = lineB.split(/(\s+)/).filter(t => t !== '');
+            const dp = lcsMatrix(tokensA, tokensB);
+            let i = 0, j = 0;
+            let html = '';
+            while (i < tokensA.length && j < tokensB.length) {
+                if (tokensA[i] === tokensB[j]) {
+                    html += escapeHtml(tokensA[i]);
+                    i++;
+                    j++;
+                } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+                    html += `<span class="diff-del">${escapeHtml(tokensA[i])}</span>`;
+                    i++;
+                } else {
+                    html += `<span class="diff-add">${escapeHtml(tokensB[j])}</span>`;
+                    j++;
+                }
+            }
+            while (i < tokensA.length) {
+                html += `<span class="diff-del">${escapeHtml(tokensA[i])}</span>`;
+                i++;
+            }
+            while (j < tokensB.length) {
+                html += `<span class="diff-add">${escapeHtml(tokensB[j])}</span>`;
+                j++;
+            }
+            return html;
+        }
+
+        function positionalDiff(a, b) {
+            let html = '';
+            const len = Math.max(a.length, b.length);
+            for (let k = 0; k < len; k++) {
+                const o = a[k], c = b[k];
+                if (o === undefined) html += `<span class="diff-add">${escapeHtml(c)}</span>\n`;
+                else if (c === undefined) html += `<span class="diff-del">${escapeHtml(o)}</span>\n`;
+                else if (o === c) html += escapeHtml(o) + '\n';
+                else html += renderWordDiff(o, c) + '\n';
+            }
+            return html;
         }
 
         function escapeHtml(text) {
