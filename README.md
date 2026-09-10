@@ -115,6 +115,7 @@ Dopo aver scelto un profilo puoi comunque rifinire le singole opzioni a mano.
 
 - **Originali / Compressi**: token (BPE reale) e conteggio caratteri
 - **Risparmio**: percentuale token salvati
+- **Car. Risparmiati**: caratteri eliminati dalla compressione (con percentuale)
 - **Stima Costi**: risparmio economico stimato, calcolato come `(token salvati / 1.000.000) × prezzoModello × richieste`. Modello e numero di richieste configurabili (default GPT-4o, 10.000 richieste)
 - **Attivi**: badge dei moduli correntemente abilitati
 - **Analizza per modulo**: mostra i token risparmiati da ogni modulo attivo

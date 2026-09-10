@@ -536,6 +536,8 @@ function updateMetrics(raw, comp) {
     const compTok = useImg ? glyphState.tokens : CompressorTokenizer.count(comp);
     const savedTok = Math.max(0, origTok - compTok);
     const percent = origTok > 0 ? Math.round((savedTok / origTok) * 100) : 0;
+    const savedChars = Math.max(0, raw.length - comp.length);
+    const charPct = raw.length > 0 ? Math.round((savedChars / raw.length) * 100) : 0;
 
     const model = COST_MODELS[$('costModel').value] || COST_MODELS['gpt4o'];
     const requests = Math.max(1, parseInt($('costRequests').value, 10) || 10000);
@@ -547,6 +549,8 @@ function updateMetrics(raw, comp) {
     $('compChars').innerText = useImg ? `${glyphState.pages.length.toLocaleString()} pag` : `${comp.length.toLocaleString()}c`;
     $('savingPercent').innerText = `${percent}%`;
     $('savedTokens').innerText = `-${savedTok.toLocaleString()} tok`;
+    $('savedChars').innerText = savedChars.toLocaleString();
+    $('savedCharsPct').innerText = `-${charPct}%`;
     $('savedCost').innerText = `$${savedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
     $('inputCharCount').innerText = `${raw.length} car.`;
     updateInputCount(raw);
