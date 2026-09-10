@@ -698,21 +698,6 @@
             </div>
         </section>
 
-        <!-- Tools Bar (Analyze / Tokenizer Mode / Timing) -->
-        <section class="bg-slate-900/40 border-b border-darkborder/60 px-3 sm:px-4 py-1.5 shrink-0 flex items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-                <button id="analyzeBtn" onclick="analyzeModules()" class="text-[10px] font-semibold text-brand-400 hover:text-brand-300 border border-brand-500/30 bg-brand-500/10 rounded px-2 py-1 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-chart-simple text-[10px]"></i> Analizza per modulo
-                </button>
-                <span class="text-[9px] font-mono text-slate-600 hidden sm:inline">|</span>
-                <span id="procTime" class="text-[9px] font-mono text-slate-500">0.0 ms</span>
-            </div>
-            <span id="tokenizerMode" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Metodo di conteggio token">BPE</span>
-        </section>
-
-        <!-- Per-Module Analysis Panel -->
-        <div id="analysisPanel" class="hidden bg-slate-900/50 border-b border-darkborder overflow-y-auto max-h-64"></div>
-
         <!-- Main Workspace Area -->
         <main class="flex-1 p-3 sm:p-4 overflow-hidden flex flex-col space-y-2">
 

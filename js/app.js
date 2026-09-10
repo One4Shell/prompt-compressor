@@ -400,7 +400,6 @@ function syncModuleStates() {
 }
 
 function processPrompt() {
-    const t0 = performance.now();
     const rawText = $('rawInput').value;
     applyPresetOmniGlyph();
     const opts = readOptions({ toonDisabled: false });
@@ -458,8 +457,6 @@ function processPrompt() {
     } else {
         disableGlyph();
     }
-
-    $('procTime').innerText = `${(performance.now() - t0).toFixed(1)} ms`;
 }
 
 async function renderGlyph(text, density) {
@@ -735,25 +732,6 @@ function updateMetrics(raw, comp) {
     $('savedCost').innerText = `$${savedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
     updateInputCount(raw);
     $('outputCharCount').innerText = useImg ? `${glyphState.pages.length} pag` : `${comp.length} car.`;
-
-    const modeEl = $('tokenizerMode');
-    let text, title, cls;
-    if (useImg) {
-        text = 'IMG';
-        title = 'Token fatturati come immagine Anthropic: (larghezza × altezza) / 750 per pagina';
-        cls = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20';
-    } else if (CompressorTokenizer.getMode() === 'bpe') {
-        text = 'BPE';
-        title = 'Metodo di conteggio token';
-        cls = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
-    } else {
-        text = 'stima';
-        title = 'Metodo di conteggio token';
-        cls = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20';
-    }
-    if (modeEl.innerText !== text) modeEl.innerText = text;
-    if (modeEl.title !== title) modeEl.title = title;
-    if (modeEl.className !== cls) modeEl.className = cls;
 }
 
 function addBadge(container, label, colorClasses) {
@@ -761,52 +739,6 @@ function addBadge(container, label, colorClasses) {
     badge.className = `text-[9px] font-semibold px-1.5 py-0.2 rounded border ${colorClasses}`;
     badge.innerText = label;
     container.appendChild(badge);
-}
-
-function analyzeModules() {
-    const panel = $('analysisPanel');
-    const btn = $('analyzeBtn');
-    const shown = panel.classList.contains('hidden') === false;
-    if (shown) {
-        panel.classList.add('hidden');
-        btn.innerHTML = '<i class="fa-solid fa-chart-simple text-[10px]"></i> Analizza';
-        return;
-    }
-
-    const rawText = $('rawInput').value;
-    const opts = readOptions();
-    const stages = [];
-    const finalText = CompressorModules.runAll(rawText, opts, (name, text) => stages.push({ name, text }));
-
-    const origTok = CompressorTokenizer.count(rawText);
-    const finalTok = CompressorTokenizer.count(finalText);
-    const totalSaved = origTok - finalTok;
-    const maxSaved = Math.max(1, ...stages.map(s => origTok - CompressorTokenizer.count(s.text)));
-
-    let html = '<div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3">';
-    for (const s of stages) {
-        const info = STAGE_INFO[s.name];
-        const saved = origTok - CompressorTokenizer.count(s.text);
-        const width = Math.max(2, Math.round((saved / maxSaved) * 100));
-        html += `<div class="bg-darkcard rounded-lg border border-darkborder p-2.5">
-            <div class="flex items-center justify-between mb-1">
-                <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded border ${info.cls}">${info.label}</span>
-                <span class="text-[11px] font-mono font-bold ${saved > 0 ? 'text-emerald-400' : 'text-slate-500'}">-${saved.toLocaleString()} tok</span>
-            </div>
-            <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-                <div class="h-full ${info.bar} rounded-full" style="width:${width}%"></div>
-            </div>
-        </div>`;
-    }
-    html += `<div class="bg-darkcard rounded-lg border border-brand-500/30 p-2.5 flex items-center justify-between">
-        <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Totale risparmiato</span>
-        <span class="text-sm font-mono font-bold text-brand-400">-${Math.max(0, totalSaved).toLocaleString()} tok</span>
-    </div>`;
-    html += '</div>';
-
-    panel.innerHTML = html;
-    panel.classList.remove('hidden');
-    btn.innerHTML = '<i class="fa-solid fa-xmark text-[10px]"></i> Nascondi';
 }
 
 const PRESET_LEVELS = ['light', 'medium', 'extreme'];
@@ -1336,10 +1268,5 @@ window.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
         closeMobileSidebar();
-        const panel = $('analysisPanel');
-        if (!panel.classList.contains('hidden')) {
-            panel.classList.add('hidden');
-            $('analyzeBtn').innerHTML = '<i class="fa-solid fa-chart-simple text-[10px]"></i> Analizza';
-        }
     }
 });
