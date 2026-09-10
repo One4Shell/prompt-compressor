@@ -13,7 +13,71 @@ window.CompressorModules = (function () {
                        .replace(/__([ \t]*)__/g, '')
                        .replace(/[-*_]{4,}/g, '---');
         }
+        if (o.strip) {
+            text = stripFormatting(text);
+        }
         return text;
+    }
+
+    // Rimuove i caratteri di formattazione markdown/HTML mantenendo il
+    // contenuto. I blocchi fence ``` sono protetti: il codice resta
+    // intatto e vengono eliminate solo le righe marker.
+    function stripFormatting(text) {
+        const n = text.length;
+        let out = '';
+        let i = 0;
+
+        while (i < n) {
+            const fenceAt = text.indexOf('```', i);
+            if (fenceAt === -1) {
+                out += stripSegment(text.slice(i));
+                break;
+            }
+            out += stripSegment(text.slice(i, fenceAt));
+
+            const infoEnd = text.indexOf('\n', fenceAt + 3);
+            const bodyStart = infoEnd === -1 ? n : infoEnd + 1;
+            const close = text.indexOf('```', bodyStart);
+            if (close === -1) {
+                out += text.slice(bodyStart);
+                break;
+            }
+            out += text.slice(bodyStart, close);
+
+            let after = close + 3;
+            if (text[after] === '\n') after++;
+            i = after;
+        }
+
+        return out;
+    }
+
+    function stripSegment(text) {
+        text = text.replace(/<!--[\s\S]*?-->\n?/g, '')
+                   .replace(/^[ \t]*<\/?[a-zA-Z][^>]*>[ \t]*$\n?/gm, '')
+                   .replace(/<\/?[a-zA-Z][^>]*>/g, '')
+                   .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+                   .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+                   .replace(/\[([^\]]*)\]\[[^\]]*\]/g, '$1')
+                   .replace(/~~([^~]+)~~/g, '$1')
+                   .replace(/\*{1,3}([^*\n]+?)\*{1,3}/g, '$1')
+                   .replace(/(^|[^\w\\])_{1,3}([^_\n]+?)_{1,3}($|[^\w])/g, '$1$2$3')
+                   .replace(/`+([^`\n]+?)`+/g, '$1');
+
+        text = text.replace(/^[ \t]{0,3}#{1,6}[ \t]+/gm, '')
+                   .replace(/^[ \t]{0,3}>[ \t]?/gm, '')
+                   .replace(/^[ \t]{0,3}>[ \t]?/gm, '')
+                   .replace(/^[ \t]{0,3}([-*_][ \t]*){3,}$\n?/gm, '')
+                   .replace(/^[ \t]*[-*+][ \t]+/gm, '')
+                   .replace(/^([ \t]*\d+)[.)][ \t]+/gm, '$1 ')
+                   .replace(/^[ \t]*\|?[ \t]*:?-{1,}:?([ \t]*\|[ \t]*:?-{1,}:?)*[ \t]*\|?[ \t]*$\n?/gm, '')
+                   .replace(/^[ \t]*\|[ \t]?/gm, '')
+                   .replace(/[ \t]?\|[ \t]*$/gm, '');
+
+        return text.replace(/([!?])\1+/g, '$1')
+                   .replace(/\.{4,}/g, '...')
+                   .replace(/[ \t]{2,}/g, ' ')
+                   .replace(/\n{3,}/g, '\n\n');
     }
 
     function rtk(text, o) {

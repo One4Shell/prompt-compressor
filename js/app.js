@@ -166,7 +166,7 @@ const COST_MODELS = {
 
 const AGGRESSION = {
     light: {
-        mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true,
+        mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true, lite_strip: false,
         mod_rtk: true, rtk_ansi: true, rtk_timestamps: true, rtk_dedupe: true, rtk_progress: true, rtk_counters: false, rtk_stacktrace: false,
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: false, headroom_base64: false, headroom_stripkeys: false,
         mod_toon: true, toon_delimiter: ',',
@@ -174,7 +174,7 @@ const AGGRESSION = {
         mod_prose: false, mod_omniglyph: false
     },
     medium: {
-        mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true,
+        mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true, lite_strip: false,
         mod_rtk: true, rtk_ansi: true, rtk_timestamps: true, rtk_dedupe: true, rtk_progress: true, rtk_counters: true, rtk_stacktrace: false,
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: true, headroom_base64: true, headroom_stripkeys: false,
         mod_toon: true, toon_delimiter: ',',
@@ -182,7 +182,7 @@ const AGGRESSION = {
         mod_prose: false, mod_omniglyph: false
     },
     extreme: {
-        mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true,
+        mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true, lite_strip: true,
         mod_rtk: true, rtk_ansi: true, rtk_timestamps: true, rtk_dedupe: true, rtk_progress: true, rtk_counters: true, rtk_stacktrace: true,
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: true, headroom_base64: true, headroom_stripkeys: true,
         mod_toon: true, toon_delimiter: '\t',
@@ -220,7 +220,8 @@ function readOptions() {
             on: $('mod_lite').checked,
             trim: $('lite_trim').checked,
             emptyLines: $('lite_empty_lines').checked,
-            markdown: $('lite_markdown').checked
+            markdown: $('lite_markdown').checked,
+            strip: $('lite_strip').checked
         },
         rtk: {
             on: $('mod_rtk').checked,

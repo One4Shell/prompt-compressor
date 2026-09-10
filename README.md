@@ -32,6 +32,7 @@ Pulizia di spazi e markdown superfluo.
 | Trim spazi inizio/fine riga | Elimina spazi bianchi ai bordi di ogni riga |
 | Elimina righe vuote multiple | Riduce 3+ righe vuote consecutive a una |
 | Pulisci markdown vuoto | Rimuove `**` e `__` vuoti, normalizza sequenze di `-*_` |
+| Rimuovi formattazione markdown/HTML | Strip completo mantenendo il contenuto: heading `#`, bullet, blockquote `>`, `**`/`*`/`__`/`_`/`~~`, codice inline, link → solo testo, immagini → alt, tabelle (separatori e pipe esterni), tag HTML e commenti, punteggiatura ripetuta (`!!!`→`!`). I blocchi fence ``` sono protetti: il codice resta intatto, vengono rimosse solo le righe marker |
 
 ### Caveman
 
@@ -106,7 +107,7 @@ Il profilo di aggressione imposta un sottoinsieme delle opzioni sopra:
 
 - **Leggera**: comportamento v2 (pulizie sicure)
 - **Media**: aggiunge intensificatori, tronca hash/base64, collassa contatori (default)
-- **Estrema**: attiva tutto, incluso Prose Compress, stack-trace, scarto chiavi JSON, telegrafico e **delimiter TOON a Tab**
+- **Estrema**: attiva tutto, incluso Prose Compress, stack-trace, scarta chiavi JSON, telegrafico, strip markdown/HTML e **delimiter TOON a Tab**
 
 Dopo aver scelto un profilo puoi comunque rifinire le singole opzioni a mano.
 
