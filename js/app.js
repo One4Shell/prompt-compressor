@@ -336,8 +336,9 @@ function writeFlatState(flat) {
     }
 }
 
-function readOptions() {
-    return flatToOpts(readFlatState(), { toonDisabled: toonAutoDisabled });
+function readOptions(options) {
+    const toonDisabled = options ? !!options.toonDisabled : toonAutoDisabled;
+    return flatToOpts(readFlatState(), { toonDisabled });
 }
 
 function syncModuleStates() {
@@ -356,6 +357,9 @@ function syncModuleStates() {
             const title = autoOff ? 'TOON disattivato: aumenterebbe i token per questo input' : '';
             if (toggle.disabled !== autoOff) toggle.disabled = autoOff;
             if (toggle.title !== title) toggle.title = title;
+            toggle.classList.toggle('auto-off', autoOff);
+            const tag = $('toonAutoTag');
+            if (tag) tag.classList.toggle('hidden', !autoOff);
         }
     }
 }
@@ -368,18 +372,7 @@ function processPrompt() {
     const activeBadgesContainer = $('activeBadges');
     activeBadgesContainer.innerHTML = '';
     let activeCount = 0;
-
     const order = ['lite', 'rtk', 'headroom', 'caveman', 'prose', 'toon', 'omniglyph'];
-    for (const name of order) {
-        if (opts[name] && opts[name].on) {
-            addBadge(activeBadgesContainer, STAGE_INFO[name].label, STAGE_INFO[name].cls);
-            activeCount++;
-        }
-    }
-    if (opts.custom.on) {
-        addBadge(activeBadgesContainer, STAGE_INFO.custom.label, STAGE_INFO.custom.cls);
-        activeCount++;
-    }
 
     let beforeToon = null;
     let toonOut = null;
@@ -401,6 +394,20 @@ function processPrompt() {
         glyphOpt = optsFinal.omniglyph;
     }
     syncModuleStates();
+
+    activeBadgesContainer.innerHTML = '';
+    activeCount = 0;
+    const optsFinal = readOptions({ toonDisabled: toonAutoDisabled });
+    for (const name of order) {
+        if (optsFinal[name] && optsFinal[name].on) {
+            addBadge(activeBadgesContainer, STAGE_INFO[name].label, STAGE_INFO[name].cls);
+            activeCount++;
+        }
+    }
+    if (optsFinal.custom.on) {
+        addBadge(activeBadgesContainer, STAGE_INFO.custom.label, STAGE_INFO.custom.cls);
+        activeCount++;
+    }
 
     if (activeCount === 0) {
         activeBadgesContainer.innerHTML = '<span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">Nessuno</span>';

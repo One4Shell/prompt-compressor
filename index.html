@@ -136,6 +136,22 @@
         .accent-rose .module-switch:checked { background: #f43f5e; }
         .accent-fuchsia .module-switch:checked { background: #d946ef; }
 
+        /* Auto-disabled module: force gray, off, unclickable */
+        .switch.auto-off,
+        .switch.auto-off:checked {
+            background: #475569;
+            opacity: .35;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .switch.auto-off::after,
+        .switch.auto-off:checked::after {
+            transform: translateX(0);
+            background: #94a3b8;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+            width: 16px;
+        }
+
         /* ===== Module accordion + disabled state ===== */
         .module-body {
             display: grid;
@@ -418,6 +434,7 @@
                     </label>
                     <div class="flex items-center gap-2 shrink-0">
                         <span class="sidebar-text text-[9px] font-mono uppercase bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20">JSON→TOON</span>
+                        <span id="toonAutoTag" class="hidden sidebar-text text-[9px] font-mono uppercase bg-slate-700/40 text-slate-300 px-1.5 py-0.5 rounded border border-slate-600" title="TOON non conveniente: aumenterebbe i token per questo input">Non conveniente</span>
                         <input type="checkbox" id="mod_toon" checked onchange="onOptionChange()" class="switch module-switch" role="switch">
                     </div>
                 </div>
