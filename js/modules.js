@@ -95,8 +95,22 @@ window.CompressorModules = (function () {
                        .replace(/[█▓▒░\=\-\>\#]{5,}/g, '');
         }
 
-        let lines = text.split('\n');
+        if (o.stacktrace || o.dedupe || o.counters) {
+            text = rtkLinePass(text, o);
+        }
+        return text;
+    }
 
+    // Applica le trasformazioni riga-per-riga di RTK solo ai segmenti di
+    // testo normale: i blocchi JSON (nudi o nei fence) vengono saltati
+    // (vd. splitProtected) cosi' restano validi per Headroom e TOON.
+    function rtkLinePass(text, o) {
+        return splitProtected(text)
+            .map(seg => seg.protected ? seg.text : rtkLines(seg.text.split('\n'), o).join('\n'))
+            .join('');
+    }
+
+    function rtkLines(lines, o) {
         if (o.stacktrace) {
             lines = lines.filter(line => {
                 const t = line.trim();
@@ -140,7 +154,7 @@ window.CompressorModules = (function () {
             lines = collapseNumericVariants(lines);
         }
 
-        return lines.join('\n');
+        return lines;
     }
 
     function numericSignature(line) {
@@ -255,6 +269,57 @@ window.CompressorModules = (function () {
             }
         }
         return text;
+    }
+
+    // True se la stringa e' JSON valido.
+    function isJson(str) {
+        try {
+            JSON.parse(str);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // Divide il testo in segmenti alternati { protected, text }. Sono
+    // protetti i blocchi JSON nudi (individuati da findJsonBlocks, che
+    // salta l'interno dei fence) e i fence con info "json" o contenuto
+    // JSON valido: le trasformazioni riga-per-riga di RTK non devono
+    // toccarli, pena JSON invalido per Headroom e TOON.
+    function splitProtected(text) {
+        const spans = [];
+
+        let i = 0;
+        while (i < text.length) {
+            const fenceAt = text.indexOf('```', i);
+            if (fenceAt === -1) break;
+            const infoEnd = text.indexOf('\n', fenceAt + 3);
+            const info = text.slice(fenceAt + 3, infoEnd === -1 ? text.length : infoEnd).trim().toLowerCase();
+            const bodyStart = infoEnd === -1 ? text.length : infoEnd + 1;
+            const close = text.indexOf('```', bodyStart);
+            const end = close === -1 ? text.length : close + 3;
+            if (info === 'json' || (close !== -1 && isJson(text.slice(bodyStart, close).trim()))) {
+                spans.push({ start: fenceAt, end });
+            }
+            i = end;
+        }
+
+        for (const block of findJsonBlocks(text)) {
+            spans.push(block);
+        }
+
+        spans.sort((a, b) => a.start - b.start);
+
+        const segments = [];
+        let pos = 0;
+        for (const span of spans) {
+            if (span.start < pos) continue;
+            if (span.start > pos) segments.push({ protected: false, text: text.slice(pos, span.start) });
+            segments.push({ protected: true, text: text.slice(span.start, span.end) });
+            pos = span.end;
+        }
+        if (pos < text.length) segments.push({ protected: false, text: text.slice(pos) });
+        return segments;
     }
 
     function headroom(text, o) {

@@ -48,7 +48,7 @@ Compressione prosaica tramite dizionari di stopword. Selezionabile lingua italia
 
 ### RTK Filter
 
-Pulizia di output di terminale e log.
+Pulizia di output di terminale e log. I blocchi JSON del testo (nudi o nei fence, con info `json` o contenuto JSON valido) sono protetti dalle trasformazioni riga-per-riga (stack-trace, deduplica, contatori) e passano intatti, così restano JSON valido per Headroom e TOON.
 
 | Opzione | Effetto |
 |---|---|
