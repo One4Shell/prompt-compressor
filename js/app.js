@@ -151,7 +151,29 @@ Analizza il meteo per i prossimi giorni.`,
 }
 \`\`\`
 
-Riassumi i settings di ogni ambiente.`
+Riassumi i settings di ogni ambiente.`,
+
+    privacy_pii: `Ecco il file di configurazione da riepilogare prima del deploy. Alcuni campi contengono credenziali e dati personali da trattare con attenzione:
+
+email_utente: mario.rossi@example.com
+telefono: +39 333 1234567
+carta_aziendale: 4111 1111 1111 1111
+iban_fornitori: IT 60 X054 2811 1010 0000 0123 456
+
+DATABASE_URL=postgres://admin:s3cretPassw0rd@db.internal:5432/prod
+api_key = "sk-proj-9f8e7d6c5b4a3210fedcba9876543210zyxwvutsrqpo"
+client_secret: 7f6e5d4c3b2a109876543210
+
+\`\`\`
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEAu1sVYcZfBzLtGmN2pQvH8cWjX5yKdR3sT0bC4dE2fG6h
+J8nM7oP1qR5sT9uV3wY7zA4cE6rH2bN9kL0mD8fG1jS4pT6vY5wC2xE7zQ1
+-----END RSA PRIVATE KEY-----
+\`\`\`
+
+session_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6Ik1hcmlvIFJvc3NpIiwicm9sZSI6ImFkbWluIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+
+Elenca gli ambienti e segnala se ci sono valori da non esporre nel log.`
 };
 
 const COST_MODELS = {
@@ -171,7 +193,7 @@ const AGGRESSION = {
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: false, headroom_base64: false, headroom_stripkeys: false,
         mod_toon: true, toon_delimiter: ',',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: false, caveman_intensifiers: false,
-        mod_prose: false, mod_omniglyph: false
+        mod_prose: false, mod_omniglyph: false, mod_privacy: false
     },
     medium: {
         mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true, lite_strip: false,
@@ -179,7 +201,7 @@ const AGGRESSION = {
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: true, headroom_base64: true, headroom_stripkeys: false,
         mod_toon: true, toon_delimiter: ',',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: false, caveman_intensifiers: true,
-        mod_prose: false, mod_omniglyph: false
+        mod_prose: false, mod_omniglyph: false, mod_privacy: false
     },
     extreme: {
         mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true, lite_strip: true,
@@ -187,7 +209,7 @@ const AGGRESSION = {
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: true, headroom_base64: true, headroom_stripkeys: true,
         mod_toon: true, toon_delimiter: '\t',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: true, caveman_intensifiers: true,
-        mod_prose: true, mod_omniglyph: false
+        mod_prose: true, mod_omniglyph: false, mod_privacy: false
     }
 };
 
@@ -207,7 +229,7 @@ const AUTO_FORCED_OFF = [
     'headroom_stripkeys',
     'mod_caveman', 'caveman_fillers', 'caveman_articles', 'caveman_preps',
     'caveman_telegraph', 'caveman_intensifiers',
-    'mod_prose', 'mod_omniglyph'
+    'mod_prose', 'mod_omniglyph', 'mod_privacy'
 ];
 
 const AUTO_STATIC_IDS = ['caveman_lang', 'omniglyph_density', 'toon_delimiter'];
@@ -230,12 +252,13 @@ const STAGE_INFO = {
     caveman: { label: 'Caveman', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', bar: 'bg-amber-500' },
     prose: { label: 'Prose Compress', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20', bar: 'bg-rose-500' },
     omniglyph: { label: 'OmniGlyph', cls: 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20', bar: 'bg-fuchsia-500' },
+    privacy: { label: 'Privacy', cls: 'bg-red-500/10 text-red-400 border-red-500/20', bar: 'bg-red-500' },
     custom: { label: 'Parole/Regex', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20', bar: 'bg-slate-500' }
 };
 
 const STORE_KEY = 'llm-compressor-v3';
 
-const MODULE_IDS = ['lite', 'caveman', 'rtk', 'headroom', 'toon', 'prose', 'omniglyph'];
+const MODULE_IDS = ['lite', 'caveman', 'rtk', 'headroom', 'toon', 'prose', 'omniglyph', 'privacy'];
 
 let isSidebarCollapsed = false;
 let currentAggression = 'medium';
@@ -324,6 +347,17 @@ function flatToOpts(flat, options) {
             on: flat.mod_omniglyph,
             density: flat.omniglyph_density
         },
+        privacy: {
+            on: flat.mod_privacy,
+            cards: flat.privacy_cards,
+            apikeys: flat.privacy_apikeys,
+            jwt: flat.privacy_jwt,
+            pem: flat.privacy_pem,
+            passwords: flat.privacy_passwords,
+            emails: flat.privacy_emails,
+            phones: flat.privacy_phones,
+            iban: flat.privacy_iban
+        },
         custom: { on: words.length > 0, words }
     };
 }
@@ -374,7 +408,7 @@ function processPrompt() {
     const activeBadgesContainer = $('activeBadges');
     activeBadgesContainer.innerHTML = '';
     let activeCount = 0;
-    const order = ['lite', 'rtk', 'headroom', 'caveman', 'prose', 'toon', 'omniglyph'];
+    const order = ['privacy', 'lite', 'rtk', 'headroom', 'caveman', 'prose', 'toon', 'omniglyph'];
 
     let beforeToon = null;
     let toonOut = null;
@@ -1081,7 +1115,7 @@ function clearAll() {
 
 function toggleAllModules(enable) {
     markCustomPreset();
-    ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom', 'mod_toon', 'mod_prose', 'mod_omniglyph'].forEach(id => {
+    ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom', 'mod_toon', 'mod_prose', 'mod_omniglyph', 'mod_privacy'].forEach(id => {
         const el = $(id);
         if (el) el.checked = enable;
     });

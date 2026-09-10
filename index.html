@@ -135,6 +135,7 @@
         .accent-cyan .module-switch:checked { background: #06b6d4; }
         .accent-rose .module-switch:checked { background: #f43f5e; }
         .accent-fuchsia .module-switch:checked { background: #d946ef; }
+        .accent-red .module-switch:checked { background: #ef4444; }
 
         /* Auto-disabled module: force gray, off, unclickable */
         .switch.auto-off,
@@ -505,6 +506,58 @@
                 </div>
             </div>
 
+            <!-- 8. PRIVACY MODULE -->
+            <div class="module-card accent-red bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="mod_privacy" class="flex items-center gap-2 font-semibold text-xs text-slate-200 cursor-pointer min-w-0">
+                        <i class="fa-solid fa-shield-halved module-icon text-red-400 text-xs w-4 text-center shrink-0"></i>
+                        <span class="sidebar-text module-title truncate">Privacy</span>
+                    </label>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="sidebar-text text-[9px] font-mono uppercase bg-red-500/10 text-red-400 px-1.5 py-0.5 rounded border border-red-500/20">PII</span>
+                        <input type="checkbox" id="mod_privacy" onchange="onOptionChange()" class="switch module-switch" role="switch">
+                    </div>
+                </div>
+
+                <div class="module-body">
+                    <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-red-500/20">
+                        <p class="text-[10px] text-slate-400 mb-1">Redige i dati sensibili sostituendoli con <span class="font-mono text-red-400">[REDACTED:TIPO]</span>. Gira prima di ogni altro modulo. Opzionale: <b>non</b> viene mai attivato da preset o Automatico.</p>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Carte di credito (Luhn)</span>
+                            <input type="checkbox" id="privacy_cards" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Chiavi API / token provider</span>
+                            <input type="checkbox" id="privacy_apikeys" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>JWT</span>
+                            <input type="checkbox" id="privacy_jwt" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Chiavi private PEM</span>
+                            <input type="checkbox" id="privacy_pem" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Password in chiaro (key=value)</span>
+                            <input type="checkbox" id="privacy_passwords" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Email</span>
+                            <input type="checkbox" id="privacy_emails" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Numeri di telefono</span>
+                            <input type="checkbox" id="privacy_phones" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>IBAN</span>
+                            <input type="checkbox" id="privacy_iban" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
             <!-- Custom Stopwords Panel -->
             <div class="sidebar-content pt-2 border-t border-darkborder">
                 <button onclick="toggleCustomRules()" class="w-full flex items-center justify-between text-xs font-semibold text-slate-300 hover:text-white py-1">
@@ -557,6 +610,7 @@
                             <option value="headroom_keys">JSON con Token/Base64 (Headroom++)</option>
                             <option value="toon_mixed">JSON Annidato (TOON)</option>
                             <option value="toon_keyed">Mappa JSON (TOON Keyed)</option>
+                            <option value="privacy_pii">Dati Sensibili (Privacy)</option>
                         </select>
                     </div>
                 </div>

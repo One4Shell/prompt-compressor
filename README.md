@@ -6,7 +6,7 @@ L'elaborazione è **100% client-side**: il testo non lascia mai il browser.
 
 ## Caratteristiche
 
-- Compressione tramite 6 moduli indipendenti, attivabili/disattivabili singolarmente o in blocco
+- Compressione tramite moduli indipendenti (Lite Clean, Caveman, RTK Filter, Headroom, TOON, Prose Compress), attivabili/disattivabili singolarmente o in blocco
 - **Automatico**: calcola in un clic la combinazione di opzioni **sicure** che minimizza i token per l'input corrente (coordinate descent su tutte le combinazioni dei moduli Lite, RTK, Headroom e TOON, escludendo le trasformazioni che rimuovono contenuto informativo) e valuta se OmniGlyph conviene come immagine, mantenendo le guardie automatiche (es. TOON disattivato se aumenterebbe i token)
 - **OmniGlyph (opzionale)**: output della pipeline renderizzato come pagine PNG ottimizzate per i modelli vision (solo route Anthropic diretta)
 - **Contatore token reale BPE** (`cl100k_base` via `gpt-tokenizer`) con fallback automatico all'euristica `char/3.8` se offline
@@ -16,7 +16,7 @@ L'elaborazione è **100% client-side**: il testo non lascia mai il browser.
 - Visualizzatore diff basato su **Myers O(ND)**: parole rimosse evidenziate con barrato rosso
 - Dizionari di compressione in italiano e inglese (cortesie, articoli, preposizioni, pronomi, intensificatori)
 - Regole personalizzate (parole/termini da rimuovere)
-- 6 prompt demo precaricati
+- 9 prompt demo precaricati
 - **Persistenza dello stato** in `localStorage` (sidebar, opzioni, lingua, parole personalizzate, modello costi)
 - Sidebar collapsible, tema scuro, layout responsive (desktop affiancato, mobile a tab). Interruttori stile Material Design: le opzioni dei moduli disattivati vengono collassate, opacizzate e rese non interattive
 - Nessuna build, nessun backend, nessuna dipendenza locale
@@ -86,6 +86,23 @@ L'encoder implementa le forme dello **spec TOON v4.1**: inline (array di primiti
 
 Rimozione di cliché e frasi ponte a bassa informazione ("In conclusione, va notato che...", "Spero di esserti stato d'aiuto", ecc.). Default disattivo, consigliato in profilo Estremo.
 
+### Privacy
+
+Redazione di dati sensibili. Gira **prima** di ogni altro modulo e sostituisce i dati trovati con placeholder etichettati (`[REDACTED:CC]`, `[REDACTED:API_KEY]`, `[REDACTED:JWT]`, ...). Se il valore è un dato scalare JSON nudo il placeholder viene quotato, così il JSON resta valido per Headroom e TOON. **Modulo opzionale: non viene mai attivato dai profili di aggressività né dall'Automatico**, va abilitato a mano.
+
+| Opzione | Effetto |
+|---|---|
+| Carte di credito | Sequenze 13-19 cifre (con spazi/trattini) validate con checksum Luhn → `[REDACTED:CC]` |
+| Chiavi API / token provider | OpenAI `sk-`/`sk-proj-`, AWS `AKIA`/`ASIA`, GitHub `ghp_/gho_/ghu_/ghs_/ghr_` e `github_pat_`, Google `AIza`, Slack `xox[baprs]-`, Stripe `sk\|pk\|rk_(live\|test)_`, `Bearer <token>`, e coppie generiche `api_key`/`access_token`/`auth_token`/`client_secret`/`secret_key` = valore → `[REDACTED:API_KEY]` |
+| JWT | Token a tre segmenti base64url `eyJ…` → `[REDACTED:JWT]` |
+| Chiavi private PEM | Blocchi `-----BEGIN … PRIVATE KEY----- … END` → `[REDACTED:PRIVATE_KEY]` |
+| Password in chiaro | Coppie `password`/`passwd`/`pwd`/`pass` = valore e password nel userinfo delle URL (`://user:pass@`) → `[REDACTED:PASSWORD]` |
+| Email | Indirizzi email → `[REDACTED:EMAIL]` |
+| Numeri di telefono | Prefissi `+`/internazionali, con separatori, 8-15 cifre (esclusi timestamp, date, IP e versioni) → `[REDACTED:PHONE]` |
+| IBAN | Codice paese + checksum mod-97 → `[REDACTED:IBAN]` |
+
+I rilevatori sono attivabili/disattivabili singolarmente; il modulo è disattivo di default.
+
 ### Parole/Regex personalizzate
 
 Campo in sidebar per termini separati da virgola. Ogni termine viene rimosso come parola intera (word boundary). Accetta anche pattern regex.
@@ -133,6 +150,7 @@ Il badge accanto alle metriche indica il metodo di conteggio: **BPE** (reale, vi
 - **JSON con Token/Base64** (Headroom++)
 - **JSON Annidato** (TOON)
 - **Mappa JSON** (TOON Keyed)
+- **Dati Sensibili** (Privacy)
 
 ## Come usare
 
@@ -186,6 +204,8 @@ prompt-compressor/
 
 I file JS sono caricati con `<script>` standard: funzionano anche aprendo `index.html` direttamente da `file://`, senza build né server.
 
-## Privacy
+## Privacy dei dati
 
 Nessun dato viene inviato a server. Tutta l'elaborazione avviene localmente nel browser. L'unica dipendenza di rete è il caricamento di librerie da CDN.
+
+Il modulo **Privacy** (redazione dati sensibili) è opzionale e resta sempre spento di default: non viene mai attivato dai profili di aggressività né dalla modalità Automatica.

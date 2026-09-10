@@ -1,5 +1,148 @@
 window.CompressorModules = (function () {
-    const ORDER = ['lite', 'rtk', 'headroom', 'caveman', 'prose', 'custom', 'toon'];
+    const ORDER = ['privacy', 'lite', 'rtk', 'headroom', 'caveman', 'prose', 'custom', 'toon'];
+
+    // ---- Privacy: redazione dati sensibili ----
+
+    // Luhn: true se la sequenza di cifre e' una carta di credito valida.
+    function luhnValid(digits) {
+        let sum = 0;
+        let double = false;
+        for (let i = digits.length - 1; i >= 0; i--) {
+            let d = digits.charCodeAt(i) - 48;
+            if (double) {
+                d *= 2;
+                if (d > 9) d -= 9;
+            }
+            sum += d;
+            double = !double;
+        }
+        return sum % 10 === 0;
+    }
+
+    // IBAN: validazione lunghezza + mod-97 (BBAN a cifre). True se plausibile.
+    function ibanValid(iban) {
+        const compact = iban.replace(/\s+/g, '').toUpperCase();
+        if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(compact)) return false;
+        const reordered = compact.slice(4) + compact.slice(0, 4);
+        let mod = 0;
+        for (const ch of reordered) {
+            if (ch >= '0' && ch <= '9') {
+                mod = (mod * 10 + (ch.charCodeAt(0) - 48)) % 97;
+            } else {
+                mod = (mod * 100 + (ch.charCodeAt(0) - 55)) % 97;
+            }
+        }
+        return mod === 1;
+    }
+
+    // Determina se il match e' un valore scalare JSON nudo (non dentro una
+    // stringa): in tal caso il placeholder va quotato per non rompere il JSON.
+    function isBareJsonScalar(text, start, end) {
+        let i = start - 1;
+        while (i >= 0 && (text[i] === ' ' || text[i] === '\t')) i--;
+        const prev = text[i];
+        if (prev === '"') return false;
+        if (prev !== ':' && prev !== ',' && prev !== '[' && prev !== '{' && prev !== '(') return false;
+        let j = end;
+        while (j < text.length && (text[j] === ' ' || text[j] === '\t')) j++;
+        const next = text[j];
+        return next === ',' || next === '}' || next === ']' || next === ')' || next === undefined || next === '\n' || next === '\r';
+    }
+
+    // Sostituisce tutti i match di "re" con il placeholder, quotandolo se
+    // appare come valore JSON nudo. "pick" (opzionale) restituisce
+    // { index, 0 } relativo al match: la porzione da rimpiazzare. Se pick
+    // ritorna null il match viene ignorato (es. card non Luhn-valida).
+    function redact(text, re, label, pick) {
+        return text.replace(re, (...args) => {
+            const match = args[0];
+            const offset = args[args.length - 2];
+            const full = args[args.length - 1];
+            const value = pick ? pick(...args) : { index: 0, 0: match };
+            if (value === null || value === undefined) return match;
+            const end = offset + match.length;
+            const placeholder = isBareJsonScalar(full, offset, end) ? `"${label}"` : label;
+            return match.slice(0, value.index) + placeholder + match.slice(value.index + value[0].length);
+        });
+    }
+
+    const PEM_KEY_RE = /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z0-9 ]*PRIVATE KEY-----/g;
+    const JWT_RE = /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\b/g;
+    const API_KEY_RE = /\b(?:(?:sk-(?:proj-)?[A-Za-z0-9_-]{20,})|(?:AKIA|ASIA)[0-9A-Z]{16}|(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{22,}|AIza[0-9A-Za-z_-]{35}|xox[baprs]-[A-Za-z0-9-]{10,}|(?:sk|pk|rk)_(?:live|test)_[A-Za-z0-9]{16,})\b/g;
+    const BEARER_RE = /\bBearer\s+[A-Za-z0-9_\-\.=]{16,}\b/g;
+    const GENERIC_SECRET_RE = /\b(?:api[_-]?key|apikey|access[_-]?token|auth[_-]?token|client[_-]?secret|secret[_-]?key)\b\s*[:=]\s*["']?[A-Za-z0-9_\-\.\/+]{12,}["']?/gi;
+    const PASSWORD_RE = /\b(?:password|passwd|pwd|pass)\b\s*[:=]\s*["']?[^\s"',;]{3,}["']?/gi;
+    const CARD_RE = /\b(?:\d[ -]?){12,18}\d\b/g;
+    const IBAN_RE = /\b[A-Z]{2}[ ]?\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,3})?\b/g;
+    const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g;
+    const PHONE_RE = /(?<![A-Za-z0-9])[+()\d][\d\s.()-]{6,17}\d(?!\d)/g;
+
+    function phoneValid(t) {
+        if (/[:/]/.test(t)) return false;
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(t)) return false;
+        if (/\d{4}[.-/]\d{1,2}[.-/]\d{1,2}/.test(t)) return false;
+        if (/\d{1,2}[.-/]\d{1,2}[.-/]\d{4}/.test(t)) return false;
+        const digits = t.replace(/[^\d]/g, '');
+        if (digits.length < 8 || digits.length > 15) return false;
+        if (/^\+/.test(t)) return true;
+        return /[ .\-()]/.test(t);
+    }
+
+    function privacy(text, o) {
+        if (o.pem) {
+            text = text.replace(PEM_KEY_RE, '[REDACTED:PRIVATE_KEY]');
+        }
+        if (o.jwt) {
+            text = text.replace(JWT_RE, '[REDACTED:JWT]');
+        }
+        if (o.apikeys) {
+            text = redact(text, API_KEY_RE, '[REDACTED:API_KEY]');
+            text = text.replace(BEARER_RE, 'Bearer [REDACTED:API_KEY]');
+            text = redact(text, GENERIC_SECRET_RE, '[REDACTED:API_KEY]', (m) => {
+                const eq = m.indexOf('=') !== -1 ? m.indexOf('=') : m.indexOf(':');
+                if (eq === -1) return null;
+                let valueStart = eq + 1;
+                while (valueStart < m.length && (m[valueStart] === ' ' || m[valueStart] === '\t')) valueStart++;
+                const value = m.slice(valueStart);
+                if (!value.replace(/^["']|["']$/g, '')) return null;
+                return { index: valueStart, 0: value };
+            });
+        }
+        if (o.passwords) {
+            text = text.replace(/\b[A-Za-z][A-Za-z0-9+.-]*:\/\/[A-Za-z0-9._~%+-]+:([^@/\s]+)@/g,
+                (m, p) => m.replace(`:${p}@`, ':[REDACTED:PASSWORD]@'));
+            text = redact(text, PASSWORD_RE, '[REDACTED:PASSWORD]', (m) => {
+                const eq = m.indexOf('=') !== -1 ? m.indexOf('=') : m.indexOf(':');
+                if (eq === -1) return null;
+                let valueStart = eq + 1;
+                while (valueStart < m.length && (m[valueStart] === ' ' || m[valueStart] === '\t')) valueStart++;
+                const value = m.slice(valueStart);
+                if (!value.replace(/^["']|["']$/g, '')) return null;
+                return { index: valueStart, 0: value };
+            });
+        }
+        if (o.cards) {
+            text = redact(text, CARD_RE, '[REDACTED:CC]', (m) => {
+                const digits = m.replace(/[ -]/g, '');
+                if (digits.length < 13 || digits.length > 19 || !luhnValid(digits)) return null;
+                return { index: 0, 0: m };
+            });
+        }
+        if (o.iban) {
+            text = redact(text, IBAN_RE, '[REDACTED:IBAN]', (m) => {
+                return ibanValid(m) ? { index: 0, 0: m } : null;
+            });
+        }
+        if (o.emails) {
+            text = redact(text, EMAIL_RE, '[REDACTED:EMAIL]');
+        }
+        if (o.phones) {
+            text = redact(text, PHONE_RE, '[REDACTED:PHONE]', (m) => {
+                return phoneValid(m) ? { index: 0, 0: m } : null;
+            });
+        }
+        return text;
+    }
 
     function lite(text, o) {
         if (o.trim) {
@@ -468,6 +611,7 @@ window.CompressorModules = (function () {
 
     function run(name, text, o) {
         switch (name) {
+            case 'privacy': return privacy(text, o);
             case 'lite': return lite(text, o);
             case 'rtk': return rtk(text, o);
             case 'headroom': return headroom(text, o);
