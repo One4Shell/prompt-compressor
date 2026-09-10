@@ -101,7 +101,7 @@
                 <div class="sidebar-header-title sidebar-hide-collapsed transition-opacity duration-200 whitespace-nowrap">
                     <h2 class="font-bold text-sm text-white flex items-center gap-2">
                         Modulo Config
-                        <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30">v2.0</span>
+                        <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30">v3.0</span>
                     </h2>
                 </div>
             </div>
@@ -122,6 +122,19 @@
             </button>
         </div>
 
+        <!-- Aggression Level Pills -->
+        <div class="sidebar-hide-collapsed p-3 border-b border-darkborder/60 bg-slate-900/40 shrink-0">
+            <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Aggressività</span>
+                <i class="fa-solid fa-gauge-high text-[10px] text-brand-400"></i>
+            </div>
+            <div class="grid grid-cols-3 gap-1">
+                <button id="agg_light" onclick="applyAggression('light')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700">Leggera</button>
+                <button id="agg_medium" onclick="applyAggression('medium')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-brand-600 text-white border border-brand-500/50">Media</button>
+                <button id="agg_extreme" onclick="applyAggression('extreme')" class="flex-1 py-1 text-[10px] font-semibold rounded-lg bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700">Estrema</button>
+            </div>
+        </div>
+
         <!-- Sidebar Scrollable Content -->
         <div class="sidebar-hide-collapsed flex-1 overflow-y-auto p-3 space-y-3">
             
@@ -129,7 +142,7 @@
             <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
                 <div class="flex items-center justify-between">
                     <label for="mod_lite" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_lite" checked onchange="processPrompt()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <input type="checkbox" id="mod_lite" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
                         <span class="flex items-center gap-2 truncate">
                             <i class="fa-solid fa-broom text-sky-400 text-xs w-4 text-center"></i>
                             <span class="sidebar-text">Lite Clean</span>
@@ -141,15 +154,15 @@
                 <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-sky-500/20">
                     <p class="text-[10px] text-slate-400 mb-1">Pulizia spazi e markdown superfluo.</p>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="lite_trim" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="lite_trim" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Trim spazi inizio/fine riga
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="lite_empty_lines" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="lite_empty_lines" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Elimina righe vuote multiple
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="lite_markdown" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="lite_markdown" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Pulisci markdown vuoto (*, _)
                     </label>
                 </div>
@@ -159,7 +172,7 @@
             <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
                 <div class="flex items-center justify-between">
                     <label for="mod_caveman" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_caveman" checked onchange="processPrompt()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <input type="checkbox" id="mod_caveman" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
                         <span class="flex items-center gap-2 truncate">
                             <i class="fa-solid fa-user-ninja text-amber-400 text-xs w-4 text-center"></i>
                             <span class="sidebar-text">Caveman</span>
@@ -171,26 +184,30 @@
                 <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-amber-500/20">
                     <div class="flex items-center justify-between mb-1.5">
                         <span class="text-[10px] text-slate-400">Lingua Regole:</span>
-                        <select id="caveman_lang" onchange="processPrompt()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none">
+                        <select id="caveman_lang" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none">
                             <option value="it" selected>Italiano</option>
                             <option value="en">Inglese</option>
                         </select>
                     </div>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_fillers" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="caveman_fillers" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Rimuovi cortesie ("Per favore...")
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_articles" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="caveman_articles" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Rimuovi articoli (il, la, the...)
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_preps" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="caveman_preps" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Rimuovi preposizioni
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_telegraph" onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="caveman_telegraph" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Telegrafico (Rimuovi pronomi)
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="caveman_intensifiers" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Rimuovi intensificatori (davvero, molto...)
                     </label>
                 </div>
             </div>
@@ -199,7 +216,7 @@
             <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
                 <div class="flex items-center justify-between">
                     <label for="mod_rtk" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_rtk" checked onchange="processPrompt()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <input type="checkbox" id="mod_rtk" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
                         <span class="flex items-center gap-2 truncate">
                             <i class="fa-solid fa-terminal text-emerald-400 text-xs w-4 text-center"></i>
                             <span class="sidebar-text">RTK Filter</span>
@@ -210,20 +227,28 @@
 
                 <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-emerald-500/20">
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_ansi" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="rtk_ansi" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Rimuovi colori ANSI (`\x1b[31m`)
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_timestamps" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="rtk_timestamps" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Rimuovi Timestamp e Date
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_dedupe" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="rtk_dedupe" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Deduplica log identici
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_progress" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="rtk_progress" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Elimina barre progresso/spinner
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="rtk_counters" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Collassa righe con contatori/indirizzi
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="rtk_stacktrace" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Rimuovi stack-trace
                     </label>
                 </div>
             </div>
@@ -232,7 +257,7 @@
             <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
                 <div class="flex items-center justify-between">
                     <label for="mod_headroom" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_headroom" checked onchange="processPrompt()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <input type="checkbox" id="mod_headroom" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
                         <span class="flex items-center gap-2 truncate">
                             <i class="fa-solid fa-code text-purple-400 text-xs w-4 text-center"></i>
                             <span class="sidebar-text">Headroom</span>
@@ -243,17 +268,43 @@
 
                 <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-purple-500/20">
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="headroom_minify" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="headroom_minify" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Minifica JSON
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="headroom_csv" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        <input type="checkbox" id="headroom_csv" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
                         Converti Array JSON in CSV
                     </label>
                     <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="headroom_hashes" onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Tronca Hash/Base64 lunghi
+                        <input type="checkbox" id="headroom_hashes" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Tronca Hash hex lunghi
                     </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="headroom_base64" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Tronca Base64/Token lunghi
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="headroom_stripkeys" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Scarta chiavi JSON (solo valori)
+                    </label>
+                </div>
+            </div>
+
+            <!-- 5. PROSE COMPRESS MODULE -->
+            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between">
+                    <label for="mod_prose" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
+                        <input type="checkbox" id="mod_prose" onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <span class="flex items-center gap-2 truncate">
+                            <i class="fa-solid fa-feather text-rose-400 text-xs w-4 text-center"></i>
+                            <span class="sidebar-text">Prose Compress</span>
+                        </span>
+                    </label>
+                    <span class="sidebar-text text-[9px] font-mono uppercase bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/20 shrink-0">Aggr.</span>
+                </div>
+
+                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-rose-500/20">
+                    <p class="text-[10px] text-slate-400 mb-1">Rimuove cliché, frasi ponte e formule a bassa informazione.</p>
                 </div>
             </div>
 
@@ -264,7 +315,7 @@
                     <i id="customRulesIcon" class="fa-solid fa-chevron-down text-slate-500 text-[10px]"></i>
                 </button>
                 <div id="customRulesPanel" class="hidden mt-2 space-y-1.5">
-                    <input type="text" id="customWords" oninput="processPrompt()" placeholder="es. urgente, importante, bozza" class="w-full bg-slate-900 text-xs border border-slate-700 rounded-lg p-2 text-slate-200 outline-none focus:border-brand-500">
+                    <input type="text" id="customWords" oninput="scheduleProcess(); saveState()" placeholder="es. urgente, importante, bozza" class="w-full bg-slate-900 text-xs border border-slate-700 rounded-lg p-2 text-slate-200 outline-none focus:border-brand-500">
                     <p class="text-[9px] text-slate-500">Termini separati da virgola rimossi.</p>
                 </div>
             </div>
@@ -296,8 +347,10 @@
                         <option value="" disabled selected>⚡ Carica Prompt Demo...</option>
                         <option value="system_mixed">Prompt Misto (Prosa + JSON + Logs)</option>
                         <option value="caveman_prose">Prosa Logorroica (Caveman)</option>
+                        <option value="caveman_extra">Prosa con Intensificatori (Caveman++)</option>
                         <option value="rtk_logs">Output Shell Logs (RTK)</option>
                         <option value="headroom_json">Array JSON Strutturato (Headroom)</option>
+                        <option value="headroom_keys">JSON con Token/Base64 (Headroom++)</option>
                     </select>
                 </div>
 
@@ -310,7 +363,7 @@
 
         <!-- Compact Metrics Dashboard Banner -->
         <section class="bg-slate-900/60 border-b border-darkborder py-2 px-3 sm:px-4 shrink-0 shadow-inner">
-            <div class="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 items-center">
+            <div class="max-w-7xl mx-auto grid grid-cols-2 lg:grid-cols-6 gap-2 sm:gap-3 items-center">
                 
                 <!-- Original Tokens -->
                 <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder flex items-center justify-between">
@@ -339,17 +392,33 @@
                     <span id="savedTokens" class="text-[10px] font-mono text-emerald-500/80">-0 tok</span>
                 </div>
 
-                <!-- Estimated Dollar Savings -->
-                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder flex items-center justify-between">
-                    <div>
-                        <span class="text-[10px] uppercase tracking-wider font-semibold text-amber-400 block">Stima Costi</span>
-                        <span id="savedCost" class="text-sm font-bold font-mono text-amber-300">$0.000</span>
+                <!-- Estimated Dollar Savings (configurable) -->
+                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder lg:col-span-2 flex flex-col">
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <span class="text-[10px] uppercase tracking-wider font-semibold text-amber-400 block">Stima Costi</span>
+                            <span id="savedCost" class="text-sm font-bold font-mono text-amber-300">$0.00</span>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <select id="costModel" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[9px] rounded px-1 py-0.5 border border-slate-700 outline-none cursor-pointer">
+                                <option value="gpt4o" selected>GPT-4o ($2.50)</option>
+                                <option value="gpt4o-mini">GPT-4o mini ($0.15)</option>
+                                <option value="claude35-sonnet">Claude 3.5 Sonnet ($3.00)</option>
+                                <option value="claude35-haiku">Claude 3.5 Haiku ($0.80)</option>
+                                <option value="gemini15-pro">Gemini 1.5 Pro ($1.25)</option>
+                                <option value="deepseek-v3">DeepSeek V3 ($0.27)</option>
+                                <option value="llama70b">Llama 3.1 70B ($0.90)</option>
+                            </select>
+                            <div class="flex items-center gap-1 text-[9px] text-slate-500">
+                                <input type="number" id="costRequests" value="10000" min="1" step="1000" onchange="onOptionChange()" class="w-14 bg-slate-900 text-slate-300 text-[9px] rounded px-1 py-0.5 border border-slate-700 outline-none focus:border-brand-500">
+                                <span>richieste</span>
+                            </div>
+                        </div>
                     </div>
-                    <span class="text-[9px] text-slate-500 font-mono">10k req</span>
                 </div>
 
                 <!-- Active Modules Badges -->
-                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder col-span-2 sm:col-span-4 lg:col-span-1 flex items-center justify-between gap-2 overflow-hidden">
+                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder col-span-2 sm:col-span-2 lg:col-span-1 flex items-center justify-between gap-2 overflow-hidden">
                     <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 shrink-0">Attivi</span>
                     <div id="activeBadges" class="flex flex-wrap gap-1 justify-end truncate">
                         <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">Nessuno</span>
@@ -358,6 +427,21 @@
 
             </div>
         </section>
+
+        <!-- Tools Bar (Analyze / Tokenizer Mode / Timing) -->
+        <section class="bg-slate-900/40 border-b border-darkborder/60 px-3 sm:px-4 py-1.5 shrink-0 flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <button id="analyzeBtn" onclick="analyzeModules()" class="text-[10px] font-semibold text-brand-400 hover:text-brand-300 border border-brand-500/30 bg-brand-500/10 rounded px-2 py-1 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-chart-simple text-[10px]"></i> Analizza per modulo
+                </button>
+                <span class="text-[9px] font-mono text-slate-600 hidden sm:inline">|</span>
+                <span id="procTime" class="text-[9px] font-mono text-slate-500">0.0 ms</span>
+            </div>
+            <span id="tokenizerMode" class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title="Metodo di conteggio token">BPE</span>
+        </section>
+
+        <!-- Per-Module Analysis Panel -->
+        <div id="analysisPanel" class="hidden bg-slate-900/50 border-b border-darkborder overflow-y-auto max-h-64"></div>
 
         <!-- Main Workspace Area -->
         <main class="flex-1 p-3 sm:p-4 overflow-hidden flex flex-col space-y-2">
@@ -385,7 +469,7 @@
                             </button>
                         </div>
                     </div>
-                    <textarea id="rawInput" oninput="processPrompt()" placeholder="Inserisci o incolla qui il tuo prompt grezzo, la conversazione, i dati JSON o i log..." class="w-full flex-1 bg-slate-900/90 text-slate-200 font-mono text-xs sm:text-sm p-3 rounded-lg border border-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none leading-relaxed min-h-0"></textarea>
+                    <textarea id="rawInput" oninput="scheduleProcess()" placeholder="Inserisci o incolla qui il tuo prompt grezzo, la conversazione, i dati JSON o i log..." class="w-full flex-1 bg-slate-900/90 text-slate-200 font-mono text-xs sm:text-sm p-3 rounded-lg border border-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none leading-relaxed min-h-0"></textarea>
                 </div>
 
                 <!-- OUTPUT PANEL -->
@@ -424,609 +508,10 @@
         <span id="toastMsg">Copiato negli appunti!</span>
     </div>
 
-    <script>
-        // --- PRESETS DEFINITION ---
-        const SAMPLE_PROMPTS = {
-            system_mixed: `[2026-09-10 01:21:00] [DEBUG] Initializing system prompt agent...
-[2026-09-10 01:21:01] [DEBUG] Fetching user payload parameters...
-[2026-09-10 01:21:01] [DEBUG] Fetching user payload parameters...
-[2026-09-10 01:21:01] [DEBUG] Fetching user payload parameters...
-
-Ciao! Per favore, vorrei chiedere la tua assistenza professionale per analizzare un lista di utenti presenti nel nostro database. Potresti gentilmente assicurarti di prendere in considerazione ciascuno dei seguenti dati forniti qui sotto? È molto importante per il mio progetto!
-
-\`\`\`json
-[
-  {
-    "id": 101,
-    "name": "Mario Rossi",
-    "role": "Software Engineer",
-    "department": "Engineering",
-    "status": "Active"
-  },
-  {
-    "id": 102,
-    "name": "Giulia Bianchi",
-    "role": "Product Manager",
-    "department": "Product",
-    "status": "Active"
-  },
-  {
-    "id": 103,
-    "name": "Luca Verdi",
-    "role": "UX Designer",
-    "department": "Design",
-    "status": "Inactive"
-  }
-]
-\`\`\`
-
-Rimango in attesa di un tuo celere riscontro. Per cortesia genera un riassunto dettagliato dei ruoli. Grazie mille in anticipo per il tuo aiuto!`,
-
-            caveman_prose: `Per favore, vorrei che tu agissi come un esperto senior di programmazione Python. Potresti gentilmente aiutarmi a scrivere una funzione che calcoli la sequenza di Fibonacci? 
-Assicurati assolutamente che il codice sia efficiente, ben documentato e che gestisca in modo corretto tutti i casi limite come ad esempio i numeri negativi o lo zero.
-Ti sarei davvero molto grato se potessi fornirmi anche degli esempi pratici di utilizzo di questa funzione. Grazie per la cortesia!`,
-
-            rtk_logs: `\x1b[32m[INFO]\x1b[0m 2026-09-10T01:15:22Z Starting build process...
-[2026-09-10 01:15:23] [DEBUG] Loading configuration files from /etc/app/config.json
-[2026-09-10 01:15:24] [DEBUG] Connecting to database cluster at 10.0.0.1:5432...
-[2026-09-10 01:15:24] [DEBUG] Connecting to database cluster at 10.0.0.1:5432...
-[2026-09-10 01:15:24] [DEBUG] Connecting to database cluster at 10.0.0.1:5432...
-[2026-09-10 01:15:25] [VERBOSE] Compiling module chunk 1 of 40...
-[====================>                    ] 50%
-[========================>                ] 60%
-[========================================>] 100%
-\x1b[31m[ERROR]\x1b[0m Failed to load asset bundle: 404 Not Found at https://cdn.example.com/assets/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2.js
-[2026-09-10 01:15:28] [INFO] Build completed with 1 non-fatal error.`,
-
-            headroom_json: `\`\`\`json
-[
-  {
-    "product_id": "PRD-001",
-    "product_name": "Tastiera Meccanica RGB",
-    "category": "Periferiche",
-    "price_eur": 129.99,
-    "in_stock": true
-  },
-  {
-    "product_id": "PRD-002",
-    "product_name": "Mouse Ergonomico Wireless",
-    "category": "Periferiche",
-    "price_eur": 59.50,
-    "in_stock": true
-  },
-  {
-    "product_id": "PRD-003",
-    "product_name": "Monitor 4K 27 pollici",
-    "category": "Schermi",
-    "price_eur": 389.00,
-    "in_stock": false
-  }
-]
-\`\`\``
-        };
-
-        // --- CAVEMAN STOPWORD DICTIONARIES ---
-        const CAVEMAN_DICT = {
-            it: {
-                fillers: [
-                    /\b(per favore|per cortesia|potresti|vorrei che tu|assicurati di|è importante che|tieni presente che|ricorda che|ti sarei davvero molto grato|grazie mille|in anticipo|rimango in attesa|celere riscontro|grazie per la cortesia|agissi come|esperto)\b/gi,
-                    /\b(in modo da|al fine di|allo scopo di|con l'obiettivo di|per quanto riguarda|come già detto|praticamente|sostanzialmente)\b/gi
-                ],
-                articles: /\b(il|lo|la|i|gli|le|un|uno|una|l'|un'|dei|degli|delle)\b/gi,
-                prepositions: /\b(di|a|da|in|con|su|per|tra|fra|del|dello|della|al|allo|alla|ai|agli|alle|dal|dallo|dalla|nel|nello|nella|nei|negli|nelle|sul|sullo|sulla|sui|sugli|sulle)\b/gi,
-                pronouns: /\b(io|tu|lui|lei|noi|voi|loro|mio|tuo|suo|nostro|vostro|loro|questo|quello|questa|quella)\b/gi
-            },
-            en: {
-                fillers: [
-                    /\b(please|kindly|could you|would you|i want you to|i need you to|make sure to|ensure that|it is important to|note that|keep in mind that|i would be very grateful|thanks in advance|act as an expert|as an AI assistant)\b/gi,
-                    /\b(in order to|for the purpose of|with the aim of|as mentioned earlier|basically|actually|essentially)\b/gi
-                ],
-                articles: /\b(a|an|the)\b/gi,
-                prepositions: /\b(of|in|to|for|with|on|at|from|by|about|as|into|through|after|over|between|out|against|during|without|before|under|around|among)\b/gi,
-                pronouns: /\b(i|you|he|she|it|we|they|my|your|his|her|its|our|their|this|that|these|those)\b/gi
-            }
-        };
-
-        // State variables
-        let isSidebarCollapsed = false;
-
-        // Init on Load
-        window.addEventListener('DOMContentLoaded', () => {
-            loadPreset('system_mixed');
-        });
-
-        // Sidebar Toggle Handler (WordPress Style)
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const toggleIcon = document.getElementById('sidebarToggleIcon');
-            isSidebarCollapsed = !isSidebarCollapsed;
-
-            if (isSidebarCollapsed) {
-                sidebar.classList.remove('sidebar-expanded');
-                sidebar.classList.add('sidebar-collapsed');
-                toggleIcon.classList.add('rotate-180');
-            } else {
-                sidebar.classList.remove('sidebar-collapsed');
-                sidebar.classList.add('sidebar-expanded');
-                toggleIcon.classList.remove('rotate-180');
-            }
-        }
-
-        function handleLogoClick() {
-            if (isSidebarCollapsed) {
-                toggleSidebar();
-            }
-        }
-
-        // Load Preset Handler
-        function loadPreset(key) {
-            if (!key || !SAMPLE_PROMPTS[key]) return;
-            document.getElementById('rawInput').value = SAMPLE_PROMPTS[key];
-            document.getElementById('presetSelect').value = key;
-            processPrompt();
-        }
-
-        function clearAll() {
-            document.getElementById('rawInput').value = '';
-            document.getElementById('presetSelect').selectedIndex = 0;
-            processPrompt();
-        }
-
-        // Main Orchestrator Function
-        function processPrompt() {
-            const rawText = document.getElementById('rawInput').value;
-            let text = rawText;
-
-            const activeBadgesContainer = document.getElementById('activeBadges');
-            activeBadgesContainer.innerHTML = '';
-            let activeCount = 0;
-
-            // --- 1. LITE MODULE ---
-            if (document.getElementById('mod_lite').checked) {
-                addBadge(activeBadgesContainer, 'Lite', 'bg-sky-500/10 text-sky-400 border-sky-500/20');
-                activeCount++;
-                
-                const trimSpaces = document.getElementById('lite_trim').checked;
-                const removeEmptyLines = document.getElementById('lite_empty_lines').checked;
-                const cleanMarkdown = document.getElementById('lite_markdown').checked;
-
-                if (trimSpaces) {
-                    text = text.split('\n').map(line => line.trim()).join('\n');
-                }
-                if (removeEmptyLines) {
-                    text = text.replace(/\n{3,}/g, '\n\n');
-                }
-                if (cleanMarkdown) {
-                    text = text.replace(/\*\*([ \t]*)\*\*/g, '')
-                              .replace(/__([ \t]*)__/g, '')
-                              .replace(/[-*_]{4,}/g, '---');
-                }
-            }
-
-            // --- 2. RTK MODULE (Terminal & Logs) ---
-            if (document.getElementById('mod_rtk').checked) {
-                addBadge(activeBadgesContainer, 'RTK', 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20');
-                activeCount++;
-
-                const removeAnsi = document.getElementById('rtk_ansi').checked;
-                const removeTimestamps = document.getElementById('rtk_timestamps').checked;
-                const dedupe = document.getElementById('rtk_dedupe').checked;
-                const removeProgress = document.getElementById('rtk_progress').checked;
-
-                if (removeAnsi) {
-                    text = text.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-n]/g, '');
-                }
-                if (removeTimestamps) {
-                    text = text.replace(/\b\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?\b/gi, '')
-                              .replace(/\[\d{2}:\d{2}:\d{2}(\.\d+)?\]/g, '')
-                              .replace(/\b\d{2}:\d{2}:\d{2}\b/g, '');
-                }
-                if (removeProgress) {
-                    text = text.replace(/\[[=#>-]+\s*\]\s*\d{1,3}%?/g, '')
-                              .replace(/[██▓▒░\=\-\>\#]{5,}/g, '');
-                }
-                if (dedupe) {
-                    const lines = text.split('\n');
-                    const filtered = [];
-                    let lastLine = '';
-                    let repeatCount = 0;
-
-                    for (const line of lines) {
-                        const trimmed = line.trim();
-                        if (trimmed !== '' && trimmed === lastLine) {
-                            repeatCount++;
-                        } else {
-                            if (repeatCount > 0) {
-                                filtered.push(`[... ${repeatCount + 1}x righe omosse ...]`);
-                                repeatCount = 0;
-                            }
-                            filtered.push(line);
-                            lastLine = trimmed;
-                        }
-                    }
-                    if (repeatCount > 0) {
-                        filtered.push(`[... ${repeatCount + 1}x righe omosse ...]`);
-                    }
-                    text = filtered.join('\n');
-                }
-            }
-
-            // --- 3. HEADROOM MODULE (Data Minify) ---
-            if (document.getElementById('mod_headroom').checked) {
-                addBadge(activeBadgesContainer, 'Headroom', 'bg-purple-500/10 text-purple-400 border-purple-500/20');
-                activeCount++;
-
-                const minifyJson = document.getElementById('headroom_minify').checked;
-                const jsonToCsv = document.getElementById('headroom_csv').checked;
-                const truncateHashes = document.getElementById('headroom_hashes').checked;
-
-                const processJsonContent = (jsonStr) => {
-                    try {
-                        const parsed = JSON.parse(jsonStr.trim());
-
-                        if (jsonToCsv && Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null) {
-                            const keys = Object.keys(parsed[0]);
-                            const header = keys.join(',');
-                            const rows = parsed.map(obj => keys.map(k => {
-                                let val = obj[k];
-                                if (val === null || val === undefined) return '';
-                                if (typeof val === 'string' && (val.includes(',') || val.includes('\n'))) {
-                                    return `"${val.replace(/"/g, '""')}"`;
-                                }
-                                return val;
-                            }).join(','));
-                            return [header, ...rows].join('\n');
-                        }
-
-                        if (minifyJson) {
-                            return JSON.stringify(parsed);
-                        }
-                    } catch (e) {
-                        // Not valid JSON
-                    }
-                    return jsonStr;
-                };
-
-                text = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, (match, code) => {
-                    const processed = processJsonContent(code);
-                    if (processed !== code) {
-                        return jsonToCsv ? `\`\`\`csv\n${processed}\n\`\`\`` : `\`\`\`json\n${processed}\n\`\`\``;
-                    }
-                    return match;
-                });
-
-                const bareJson = text.trim();
-                if (bareJson.startsWith('[') || bareJson.startsWith('{')) {
-                    const processed = processJsonContent(bareJson);
-                    if (processed !== bareJson) {
-                        text = processed;
-                    }
-                }
-
-                if (truncateHashes) {
-                    text = text.replace(/\b([a-f0-9]{32,64})\b/gi, (match) => match.substring(0, 8) + '...' + match.substring(match.length - 6));
-                }
-            }
-
-            // --- 4. CAVEMAN MODULE (Prose Compression) ---
-            if (document.getElementById('mod_caveman').checked) {
-                addBadge(activeBadgesContainer, 'Caveman', 'bg-amber-500/10 text-amber-400 border-amber-500/20');
-                activeCount++;
-
-                const lang = document.getElementById('caveman_lang').value;
-                const dict = CAVEMAN_DICT[lang] || CAVEMAN_DICT.it;
-
-                const removeFillers = document.getElementById('caveman_fillers').checked;
-                const removeArticles = document.getElementById('caveman_articles').checked;
-                const removePreps = document.getElementById('caveman_preps').checked;
-                const telegraphese = document.getElementById('caveman_telegraph').checked;
-
-                if (removeFillers) {
-                    dict.fillers.forEach(regex => {
-                        text = text.replace(regex, '');
-                    });
-                }
-                if (removeArticles) {
-                    text = text.replace(dict.articles, '');
-                }
-                if (removePreps) {
-                    text = text.replace(dict.prepositions, '');
-                }
-                if (telegraphese) {
-                    text = text.replace(dict.pronouns, '');
-                }
-
-                text = text.replace(/[ \t]{2,}/g, ' ').replace(/\n /g, '\n');
-            }
-
-            // --- CUSTOM WORDS REMOVAL ---
-            const customWordsInput = document.getElementById('customWords').value.trim();
-            if (customWordsInput) {
-                const words = customWordsInput.split(',').map(w => w.trim()).filter(Boolean);
-                words.forEach(w => {
-                    let re;
-                    try {
-                        re = new RegExp(`\\b(${w})\\b`, 'gi');
-                    } catch (e) {
-                        const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                        re = new RegExp(`\\b${esc}\\b`, 'gi');
-                    }
-                    text = text.replace(re, '');
-                });
-                text = text.replace(/[ \t]{2,}/g, ' ');
-            }
-
-            if (activeCount === 0) {
-                activeBadgesContainer.innerHTML = '<span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">Nessuno</span>';
-            }
-
-            document.getElementById('compressedOutput').value = text;
-            updateMetrics(rawText, text);
-            renderDiff(rawText, text);
-        }
-
-        // Token Estimation Heuristics
-        function estimateTokens(str) {
-            if (!str) return 0;
-            const chars = str.length;
-            return Math.ceil(chars / 3.8);
-        }
-
-        function updateMetrics(raw, comp) {
-            const origTok = estimateTokens(raw);
-            const compTok = estimateTokens(comp);
-            const savedTok = Math.max(0, origTok - compTok);
-            const percent = origTok > 0 ? Math.round((savedTok / origTok) * 100) : 0;
-
-            const costSavedPerReq = (savedTok / 1000000) * 3.00;
-            const costSaved10k = costSavedPerReq * 10000;
-
-            document.getElementById('origTokens').innerText = origTok.toLocaleString();
-            document.getElementById('origChars').innerText = `${raw.length.toLocaleString()}c`;
-
-            document.getElementById('compTokens').innerText = compTok.toLocaleString();
-            document.getElementById('compChars').innerText = `${comp.length.toLocaleString()}c`;
-
-            document.getElementById('savingPercent').innerText = `${percent}%`;
-            document.getElementById('savedTokens').innerText = `-${savedTok.toLocaleString()} tok`;
-
-            document.getElementById('savedCost').innerText = `$${costSaved10k.toFixed(3)}`;
-            document.getElementById('inputCharCount').innerText = `${raw.length} car.`;
-            document.getElementById('outputCharCount').innerText = `${comp.length} car.`;
-        }
-
-        function addBadge(container, label, colorClasses) {
-            const badge = document.createElement('span');
-            badge.className = `text-[9px] font-semibold px-1.5 py-0.2 rounded border ${colorClasses}`;
-            badge.innerText = label;
-            container.appendChild(badge);
-        }
-
-        // Diff Viewer Logic (Always active)
-        function renderDiff(orig, comp) {
-            const diffViewer = document.getElementById('diffViewer');
-            if (!orig) {
-                diffViewer.innerHTML = '<span class="text-slate-500 italic">Inserisci un prompt per vedere la differenza...</span>';
-                return;
-            }
-
-            const origLines = orig.split('\n');
-            const compLines = comp.split('\n');
-
-            let html;
-            if (origLines.length * compLines.length > 4000000) {
-                html = positionalDiff(origLines, compLines);
-            } else {
-                html = traceLines(origLines, compLines, lcsMatrix(origLines, compLines));
-            }
-            diffViewer.innerHTML = html;
-        }
-
-        function lcsMatrix(a, b) {
-            const m = a.length, n = b.length;
-            const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-            for (let i = m - 1; i >= 0; i--) {
-                for (let j = n - 1; j >= 0; j--) {
-                    if (a[i] === b[j]) dp[i][j] = dp[i + 1][j + 1] + 1;
-                    else dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
-                }
-            }
-            return dp;
-        }
-
-        function traceLines(a, b, dp) {
-            let i = 0, j = 0;
-            const m = a.length, n = b.length;
-            let html = '';
-            while (i < m && j < n) {
-                if (a[i] === b[j]) {
-                    html += escapeHtml(a[i]) + '\n';
-                    i++;
-                    j++;
-                } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-                    if (dp[i + 1][j] === dp[i][j + 1] && shareWord(a[i], b[j])) {
-                        html += renderWordDiff(a[i], b[j]) + '\n';
-                        i++;
-                        j++;
-                    } else {
-                        html += `<span class="diff-del">${escapeHtml(a[i])}</span>\n`;
-                        i++;
-                    }
-                } else {
-                    html += `<span class="diff-add">${escapeHtml(b[j])}</span>\n`;
-                    j++;
-                }
-            }
-            while (i < m) {
-                html += `<span class="diff-del">${escapeHtml(a[i])}</span>\n`;
-                i++;
-            }
-            while (j < n) {
-                html += `<span class="diff-add">${escapeHtml(b[j])}</span>\n`;
-                j++;
-            }
-            return html;
-        }
-
-        function shareWord(lineA, lineB) {
-            const wordsA = new Set(lineA.toLowerCase().split(/\s+/).filter(Boolean));
-            return lineB.toLowerCase().split(/\s+/).some(w => wordsA.has(w));
-        }
-
-        function renderWordDiff(lineA, lineB) {
-            const tokensA = lineA.split(/(\s+)/).filter(t => t !== '');
-            const tokensB = lineB.split(/(\s+)/).filter(t => t !== '');
-            const dp = lcsMatrix(tokensA, tokensB);
-            let i = 0, j = 0;
-            let html = '';
-            while (i < tokensA.length && j < tokensB.length) {
-                if (tokensA[i] === tokensB[j]) {
-                    html += escapeHtml(tokensA[i]);
-                    i++;
-                    j++;
-                } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-                    html += `<span class="diff-del">${escapeHtml(tokensA[i])}</span>`;
-                    i++;
-                } else {
-                    html += `<span class="diff-add">${escapeHtml(tokensB[j])}</span>`;
-                    j++;
-                }
-            }
-            while (i < tokensA.length) {
-                html += `<span class="diff-del">${escapeHtml(tokensA[i])}</span>`;
-                i++;
-            }
-            while (j < tokensB.length) {
-                html += `<span class="diff-add">${escapeHtml(tokensB[j])}</span>`;
-                j++;
-            }
-            return html;
-        }
-
-        function positionalDiff(a, b) {
-            let html = '';
-            const len = Math.max(a.length, b.length);
-            for (let k = 0; k < len; k++) {
-                const o = a[k], c = b[k];
-                if (o === undefined) html += `<span class="diff-add">${escapeHtml(c)}</span>\n`;
-                else if (c === undefined) html += `<span class="diff-del">${escapeHtml(o)}</span>\n`;
-                else if (o === c) html += escapeHtml(o) + '\n';
-                else html += renderWordDiff(o, c) + '\n';
-            }
-            return html;
-        }
-
-        function escapeHtml(text) {
-            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-        }
-
-        function toggleAllModules(enable) {
-            ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.checked = enable;
-            });
-            processPrompt();
-        }
-
-        function toggleCustomRules() {
-            const panel = document.getElementById('customRulesPanel');
-            const icon = document.getElementById('customRulesIcon');
-            if (panel) {
-                const isHidden = panel.classList.contains('hidden');
-                panel.classList.toggle('hidden');
-                if (icon) {
-                    icon.className = isHidden ? 'fa-solid fa-chevron-up text-slate-500 text-[10px]' : 'fa-solid fa-chevron-down text-slate-500 text-[10px]';
-                }
-            }
-        }
-
-        async function pasteFromClipboard() {
-            try {
-                const text = await navigator.clipboard.readText();
-                if (text) {
-                    document.getElementById('rawInput').value = text;
-                    processPrompt();
-                    showToast('Testo incollato dagli appunti!');
-                }
-            } catch (err) {
-                showToast('Errore durante la lettura dagli appunti', true);
-            }
-        }
-
-        function copyOutput() {
-            const outputText = document.getElementById('compressedOutput').value;
-            if (!outputText) return;
-
-            if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(outputText).then(() => {
-                    showToast('Copiato negli appunti!');
-                }).catch(() => {
-                    fallbackCopyText(outputText);
-                });
-            } else {
-                fallbackCopyText(outputText);
-            }
-        }
-
-        function fallbackCopyText(text) {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            textArea.style.left = '-9999px';
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                showToast('Copiato negli appunti!');
-            } catch (err) {
-                showToast('Errore durante la copia', true);
-            }
-            document.body.removeChild(textArea);
-        }
-
-        function switchMobileTab(tab) {
-            const inputPanel = document.getElementById('inputPanel');
-            const outputPanel = document.getElementById('outputPanel');
-            const btnInput = document.getElementById('tabBtnInput');
-            const btnOutput = document.getElementById('tabBtnOutput');
-
-            if (tab === 'input') {
-                inputPanel.classList.remove('hidden');
-                outputPanel.classList.add('hidden');
-                outputPanel.classList.remove('flex');
-                btnInput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white';
-                btnOutput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400';
-            } else {
-                inputPanel.classList.add('hidden');
-                outputPanel.classList.remove('hidden');
-                outputPanel.classList.add('flex');
-                btnInput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400';
-                btnOutput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white';
-            }
-        }
-
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toastMsg');
-            if (!toast || !toastMsg) return;
-
-            toastMsg.innerText = message;
-            if (isError) {
-                toast.classList.remove('bg-emerald-600');
-                toast.classList.add('bg-red-600');
-            } else {
-                toast.classList.remove('bg-red-600');
-                toast.classList.add('bg-emerald-600');
-            }
-
-            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
-            toast.classList.add('opacity-100', 'translate-y-0');
-
-            setTimeout(() => {
-                toast.classList.remove('opacity-100', 'translate-y-0');
-                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
-            }, 2500);
-        }
-    </script>
+    <script src="js/dicts.js"></script>
+    <script src="js/tokenizer.js"></script>
+    <script src="js/modules.js"></script>
+    <script src="js/diff.js"></script>
+    <script src="js/app.js"></script>
 </body>
 </html>
