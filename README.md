@@ -12,7 +12,7 @@ L'elaborazione è **100% client-side**: il testo non lascia mai il browser.
 - **Contatore token reale BPE** (`cl100k_base` via `gpt-tokenizer`) con fallback automatico all'euristica `char/3.8` se offline
 - **Slider di aggressività** (Leggera / Media / Estrema) che applica profili di regole predefiniti
 - **Analisi per modulo**: quanti token risparmia ogni singolo modulo
-- Calcolo in tempo reale di token originali, compressi, risparmio percentuale e **stima costi configurabile** (modello + numero richieste)
+- Calcolo in tempo reale di token originali, compressi, risparmio percentuale e **Risparmio configurabile** (modello + numero richieste)
 - Visualizzatore diff basato su **Myers O(ND)**: parole rimosse evidenziate con barrato rosso
 - Dizionari di compressione in italiano e inglese (cortesie, articoli, preposizioni, pronomi, intensificatori)
 - Regole personalizzate (parole/termini da rimuovere)
@@ -134,7 +134,7 @@ Il pulsante **Automatico** e le pill di aggressività restano evidenziati finch�
 - **Originali / Compressi**: token (BPE reale) e conteggio caratteri
 - **Risparmio**: percentuale token salvati
 - **Car. Risparmiati**: caratteri eliminati dalla compressione (con percentuale)
-- **Stima Costi**: risparmio economico stimato, calcolato come `(token salvati / 1.000.000) × prezzoModello × richieste`. Modello e numero di richieste configurabili (default GPT-4o, 10.000 richieste)
+- **Risparmio**: risparmio economico stimato, calcolato come `(token salvati / 1.000.000) × prezzoModello × richieste`. Modello e numero di richieste configurabili (default GPT-4o, 10.000 richieste)
 - **Attivi**: badge dei moduli correntemente abilitati
 - **Analizza per modulo**: mostra i token risparmiati da ogni modulo attivo
 
