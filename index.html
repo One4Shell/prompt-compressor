@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="it" class="dark h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Prompt Compressor & Token Optimizer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        },
+                        darkbg: '#080c14',
+                        sidebar: '#0d131f',
+                        darkcard: '#121824',
+                        darkborder: '#1b2436',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(13, 19, 31, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.35);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(99, 102, 241, 0.7);
+        }
+        .diff-del {
+            background-color: rgba(239, 68, 68, 0.25);
+            color: #fca5a5;
+            text-decoration: line-through;
+            padding: 0 3px;
+            border-radius: 3px;
+        }
+        .diff-add {
+            background-color: rgba(34, 197, 94, 0.25);
+            color: #86efac;
+            padding: 0 3px;
+            border-radius: 3px;
+        }
+
+        /* Sidebar Collapsed States & Animations */
+        .sidebar-expanded {
+            width: 20rem; /* 320px */
+        }
+        .sidebar-collapsed {
+            width: 4rem; /* 64px */
+        }
+        .sidebar-collapsed .sidebar-hide-collapsed {
+            display: none !important;
+        }
+        .sidebar-collapsed #sidebarHeader {
+            justify-content: center;
+            padding-left: 0;
+            padding-right: 0;
+        }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-200 font-sans h-full min-h-screen flex overflow-hidden selection:bg-brand-500 selection:text-white">
+
+    <!-- ==================== SIDEBAR (WORDPRESS-STYLE COLLAPSIBLE) ==================== -->
+    <aside id="sidebar" class="sidebar-expanded bg-sidebar border-r border-darkborder h-screen flex flex-col transition-all duration-300 ease-in-out z-30 shrink-0 relative shadow-2xl">
+        
+        <!-- Sidebar Top Header -->
+        <div id="sidebarHeader" class="h-14 px-4 border-b border-darkborder flex items-center justify-between shrink-0">
+            <div onclick="handleLogoClick()" class="flex items-center gap-3 overflow-hidden cursor-pointer" title="Espandi Modulo Config">
+                <div id="sidebarLogo" class="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white font-bold text-sm shrink-0 shadow-md shadow-brand-500/20 hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-compress"></i>
+                </div>
+                <div class="sidebar-header-title sidebar-hide-collapsed transition-opacity duration-200 whitespace-nowrap">
+                    <h2 class="font-bold text-sm text-white flex items-center gap-2">
+                        Modulo Config
+                        <span class="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30">v2.0</span>
+                    </h2>
+                </div>
+            </div>
+
+            <!-- WordPress style Toggle Button -->
+            <button onclick="toggleSidebar()" id="sidebarToggleBtn" class="sidebar-hide-collapsed w-7 h-7 rounded-lg bg-slate-800/80 hover:bg-brand-600 text-slate-400 hover:text-white flex items-center justify-center transition border border-slate-700/60" title="Riduci Sidebar">
+                <i id="sidebarToggleIcon" class="fa-solid fa-chevron-left text-xs transition-transform duration-300"></i>
+            </button>
+        </div>
+
+        <!-- Sidebar Actions Bar -->
+        <div class="sidebar-hide-collapsed p-3 border-b border-darkborder/60 bg-slate-900/40 flex items-center justify-between gap-2 shrink-0">
+            <button onclick="toggleAllModules(true)" class="sidebar-text text-[11px] font-semibold text-brand-400 hover:text-brand-300 transition flex items-center gap-1">
+                <i class="fa-solid fa-check-double text-[10px]"></i> Abilita tutti
+            </button>
+            <button onclick="toggleAllModules(false)" class="sidebar-text text-[11px] text-slate-400 hover:text-slate-200 transition flex items-center gap-1">
+                Disabilita
+            </button>
+        </div>
+
+        <!-- Sidebar Scrollable Content -->
+        <div class="sidebar-hide-collapsed flex-1 overflow-y-auto p-3 space-y-3">
+            
+            <!-- 1. LITE MODULE -->
+            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between">
+                    <label for="mod_lite" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
+                        <input type="checkbox" id="mod_lite" checked onchange="processPrompt()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <span class="flex items-center gap-2 truncate">
+                            <i class="fa-solid fa-broom text-sky-400 text-xs w-4 text-center"></i>
+                            <span class="sidebar-text">Lite Clean</span>
+                        </span>
+                    </label>
+                    <span class="sidebar-text text-[9px] font-mono uppercase bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/20 shrink-0">String</span>
+                </div>
+                
+                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-sky-500/20">
+                    <p class="text-[10px] text-slate-400 mb-1">Pulizia spazi e markdown superfluo.</p>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="lite_trim" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Trim spazi inizio/fine riga
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="lite_empty_lines" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Elimina righe vuote multiple
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="lite_markdown" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Pulisci markdown vuoto (*, #)
+                    </label>
+                </div>
+            </div>
+
+            <!-- 2. CAVEMAN MODULE -->
+            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between">
+                    <label for="mod_caveman" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
+                        <input type="checkbox" id="mod_caveman" checked onchange="processPrompt()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <span class="flex items-center gap-2 truncate">
+                            <i class="fa-solid fa-user-ninja text-amber-400 text-xs w-4 text-center"></i>
+                            <span class="sidebar-text">Caveman</span>
+                        </span>
+                    </label>
+                    <span class="sidebar-text text-[9px] font-mono uppercase bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0">Prose</span>
+                </div>
+
+                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-amber-500/20">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[10px] text-slate-400">Lingua Regole:</span>
+                        <select id="caveman_lang" onchange="processPrompt()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none">
+                            <option value="it" selected>Italiano</option>
+                            <option value="en">Inglese</option>
+                        </select>
+                    </div>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="caveman_fillers" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Rimuovi cortesie ("Per favore...")
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="caveman_articles" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Rimuovi articoli (il, la, the...)
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="caveman_preps" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Rimuovi preposizioni
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="caveman_telegraph" onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Telegrafico (Rimuovi pronomi)
+                    </label>
+                </div>
+            </div>
+
+            <!-- 3. RTK MODULE -->
+            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between">
+                    <label for="mod_rtk" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
+                        <input type="checkbox" id="mod_rtk" checked onchange="processPrompt()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <span class="flex items-center gap-2 truncate">
+                            <i class="fa-solid fa-terminal text-emerald-400 text-xs w-4 text-center"></i>
+                            <span class="sidebar-text">RTK Filter</span>
+                        </span>
+                    </label>
+                    <span class="sidebar-text text-[9px] font-mono uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">Logs</span>
+                </div>
+
+                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-emerald-500/20">
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="rtk_ansi" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Rimuovi colori ANSI (`\x1b[31m`)
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="rtk_timestamps" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Rimuovi Timestamp e Date
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="rtk_dedupe" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Deduplica log identici
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="rtk_progress" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Elimina barre progresso/spinner
+                    </label>
+                </div>
+            </div>
+
+            <!-- 4. HEADROOM MODULE -->
+            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between">
+                    <label for="mod_headroom" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
+                        <input type="checkbox" id="mod_headroom" checked onchange="processPrompt()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <span class="flex items-center gap-2 truncate">
+                            <i class="fa-solid fa-code text-purple-400 text-xs w-4 text-center"></i>
+                            <span class="sidebar-text">Headroom</span>
+                        </span>
+                    </label>
+                    <span class="sidebar-text text-[9px] font-mono uppercase bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/20 shrink-0">Data</span>
+                </div>
+
+                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-purple-500/20">
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="headroom_minify" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Minifica JSON
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="headroom_csv" checked onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Converti Array JSON in CSV
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
+                        <input type="checkbox" id="headroom_hashes" onchange="processPrompt()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
+                        Tronca Hash/Base64 lunghi
+                    </label>
+                </div>
+            </div>
+
+            <!-- Custom Stopwords Panel -->
+            <div class="sidebar-content pt-2 border-t border-darkborder">
+                <button onclick="toggleCustomRules()" class="w-full flex items-center justify-between text-xs font-semibold text-slate-300 hover:text-white py-1">
+                    <span><i class="fa-solid fa-key text-slate-500 mr-1.5"></i> Parole/Regex</span>
+                    <i id="customRulesIcon" class="fa-solid fa-chevron-down text-slate-500 text-[10px]"></i>
+                </button>
+                <div id="customRulesPanel" class="hidden mt-2 space-y-1.5">
+                    <input type="text" id="customWords" oninput="processPrompt()" placeholder="es. urgente, importante, bozza" class="w-full bg-slate-900 text-xs border border-slate-700 rounded-lg p-2 text-slate-200 outline-none focus:border-brand-500">
+                    <p class="text-[9px] text-slate-500">Termini separati da virgola rimossi.</p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="sidebar-hide-collapsed p-3 border-t border-darkborder bg-slate-900/60 text-[10px] text-slate-500 text-center shrink-0">
+            Elaborazione 100% Client-Side
+        </div>
+    </aside>
+
+    <!-- ==================== MAIN WORKSPACE CONTAINER ==================== -->
+    <div class="flex-1 flex flex-col h-screen overflow-hidden bg-darkbg">
+
+        <!-- Top Header Navigation -->
+        <header class="border-b border-darkborder bg-darkcard/90 backdrop-blur h-14 shrink-0 px-4 flex items-center justify-between gap-3 z-20">
+            <div class="flex items-center gap-3">
+                <h1 class="font-bold text-sm sm:text-base text-white flex items-center gap-2 truncate">
+                    <i class="fa-solid fa-bolt text-brand-500 sm:hidden"></i>
+                    LLM Prompt Compressor
+                </h1>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Preset Dropdown -->
+                <div class="relative inline-block text-left">
+                    <select id="presetSelect" onchange="loadPreset(this.value)" class="bg-slate-900/90 border border-slate-700/80 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-brand-500 transition cursor-pointer max-w-[180px] sm:max-w-xs truncate">
+                        <option value="" disabled selected>⚡ Carica Prompt Demo...</option>
+                        <option value="system_mixed">Prompt Misto (Prosa + JSON + Logs)</option>
+                        <option value="caveman_prose">Prosa Logorroica (Caveman)</option>
+                        <option value="rtk_logs">Output Shell Logs (RTK)</option>
+                        <option value="headroom_json">Array JSON Strutturato (Headroom)</option>
+                    </select>
+                </div>
+
+                <button onclick="clearAll()" class="px-2.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition flex items-center gap-1.5" title="Cancella tutto">
+                    <i class="fa-solid fa-trash-can text-slate-400"></i>
+                    <span class="hidden sm:inline">Pulisci</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Compact Metrics Dashboard Banner -->
+        <section class="bg-slate-900/60 border-b border-darkborder py-2 px-3 sm:px-4 shrink-0 shadow-inner">
+            <div class="max-w-7xl mx-auto grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 items-center">
+                
+                <!-- Original Tokens -->
+                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block">Originali</span>
+                        <span id="origTokens" class="text-sm font-bold font-mono text-slate-200">0</span>
+                    </div>
+                    <span id="origChars" class="text-[10px] text-slate-500 font-mono">0c</span>
+                </div>
+
+                <!-- Compressed Tokens -->
+                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider font-semibold text-brand-400 block">Compressi</span>
+                        <span id="compTokens" class="text-sm font-bold font-mono text-brand-400">0</span>
+                    </div>
+                    <span id="compChars" class="text-[10px] text-slate-500 font-mono">0c</span>
+                </div>
+
+                <!-- Token Savings % -->
+                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider font-semibold text-emerald-400 block">Risparmio</span>
+                        <span id="savingPercent" class="text-sm font-bold font-mono text-emerald-400">0%</span>
+                    </div>
+                    <span id="savedTokens" class="text-[10px] font-mono text-emerald-500/80">-0 tok</span>
+                </div>
+
+                <!-- Estimated Dollar Savings -->
+                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider font-semibold text-amber-400 block">Stima Costi</span>
+                        <span id="savedCost" class="text-sm font-bold font-mono text-amber-300">$0.000</span>
+                    </div>
+                    <span class="text-[9px] text-slate-500 font-mono">10k req</span>
+                </div>
+
+                <!-- Active Modules Badges -->
+                <div class="bg-darkcard px-3 py-1.5 rounded-lg border border-darkborder col-span-2 sm:col-span-4 lg:col-span-1 flex items-center justify-between gap-2 overflow-hidden">
+                    <span class="text-[10px] uppercase tracking-wider font-semibold text-slate-400 shrink-0">Attivi</span>
+                    <div id="activeBadges" class="flex flex-wrap gap-1 justify-end truncate">
+                        <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">Nessuno</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Main Workspace Area -->
+        <main class="flex-1 p-3 sm:p-4 overflow-hidden flex flex-col space-y-2">
+
+            <!-- Mobile View Switcher Tabs -->
+            <div class="flex lg:hidden bg-darkcard p-1 rounded-xl border border-darkborder shrink-0">
+                <button id="tabBtnInput" onclick="switchMobileTab('input')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white">Input Prompt</button>
+                <button id="tabBtnOutput" onclick="switchMobileTab('output')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400">Output Compresso</button>
+            </div>
+
+            <!-- Side-by-side Code Editors Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 flex-1 h-full min-h-0">
+                
+                <!-- INPUT PANEL -->
+                <div id="inputPanel" class="bg-darkcard rounded-xl border border-darkborder p-3 flex flex-col h-full shadow-lg relative min-h-0">
+                    <div class="flex items-center justify-between mb-2 shrink-0">
+                        <label for="rawInput" class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                            Prompt Originale (Input)
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <span id="inputCharCount" class="text-[11px] font-mono text-slate-400">0 car.</span>
+                            <button onclick="pasteFromClipboard()" class="text-xs text-brand-400 hover:text-brand-300 px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition flex items-center gap-1" title="Incolla">
+                                <i class="fa-regular fa-paste text-[11px]"></i> <span class="hidden sm:inline">Incolla</span>
+                            </button>
+                        </div>
+                    </div>
+                    <textarea id="rawInput" oninput="processPrompt()" placeholder="Inserisci o incolla qui il tuo prompt grezzo, la conversazione, i dati JSON o i log..." class="w-full flex-1 bg-slate-900/90 text-slate-200 font-mono text-xs sm:text-sm p-3 rounded-lg border border-slate-800 outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 resize-none leading-relaxed min-h-0"></textarea>
+                </div>
+
+                <!-- OUTPUT PANEL -->
+                <div id="outputPanel" class="hidden lg:flex bg-darkcard rounded-xl border border-darkborder p-3 flex-col h-full shadow-lg relative min-h-0">
+                    <div class="flex items-center justify-between mb-2 shrink-0">
+                        <div class="flex items-center gap-2 sm:gap-3">
+                            <label class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                Output Compresso (Diff)
+                            </label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span id="outputCharCount" class="text-[11px] font-mono text-brand-400">0 car.</span>
+                            <button id="copyBtn" onclick="copyOutput()" class="text-xs font-semibold bg-brand-600 hover:bg-brand-500 text-white px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1.5">
+                                <i class="fa-regular fa-copy"></i>
+                                <span id="copyBtnText">Copia</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Hidden Textarea for copying compressed plain text -->
+                    <textarea id="compressedOutput" readonly class="hidden"></textarea>
+
+                    <!-- HTML Diff Viewer (Always visible) -->
+                    <div id="diffViewer" class="w-full flex-1 bg-slate-900/90 text-slate-200 font-mono text-xs sm:text-sm p-3 rounded-lg border border-slate-800 overflow-y-auto leading-relaxed whitespace-pre-wrap min-h-0"></div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-emerald-600 text-white px-4 py-2 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 opacity-0 pointer-events-none transition-all duration-300 transform translate-y-2 z-50">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toastMsg">Copiato negli appunti!</span>
+    </div>
+
+    <script>
+        // --- PRESETS DEFINITION ---
+        const SAMPLE_PROMPTS = {
+            system_mixed: `[2026-09-10 01:21:00] [DEBUG] Initializing system prompt agent...
+[2026-09-10 01:21:01] [DEBUG] Fetching user payload parameters...
+[2026-09-10 01:21:01] [DEBUG] Fetching user payload parameters...
+[2026-09-10 01:21:01] [DEBUG] Fetching user payload parameters...
+
+Ciao! Per favore, vorrei chiedere la tua assistenza professionale per analizzare un lista di utenti presenti nel nostro database. Potresti gentilmente assicurarti di prendere in considerazione ciascuno dei seguenti dati forniti qui sotto? È molto importante per il mio progetto!
+
+\`\`\`json
+[
+  {
+    "id": 101,
+    "name": "Mario Rossi",
+    "role": "Software Engineer",
+    "department": "Engineering",
+    "status": "Active"
+  },
+  {
+    "id": 102,
+    "name": "Giulia Bianchi",
+    "role": "Product Manager",
+    "department": "Product",
+    "status": "Active"
+  },
+  {
+    "id": 103,
+    "name": "Luca Verdi",
+    "role": "UX Designer",
+    "department": "Design",
+    "status": "Inactive"
+  }
+]
+\`\`\`
+
+Rimango in attesa di un tuo celere riscontro. Per cortesia genera un riassunto dettagliato dei ruoli. Grazie mille in anticipo per il tuo aiuto!`,
+
+            caveman_prose: `Per favore, vorrei che tu agissi come un esperto senior di programmazione Python. Potresti gentilmente aiutarmi a scrivere una funzione che calcoli la sequenza di Fibonacci? 
+Assicurati assolutamente che il codice sia efficiente, ben documentato e che gestisca in modo corretto tutti i casi limite come ad esempio i numeri negativi o lo zero.
+Ti sarei davvero molto grato se potessi fornirmi anche degli esempi pratici di utilizzo di questa funzione. Grazie per la cortesia!`,
+
+            rtk_logs: `\x1b[32m[INFO]\x1b[0m 2026-09-10T01:15:22Z Starting build process...
+[2026-09-10 01:15:23] [DEBUG] Loading configuration files from /etc/app/config.json
+[2026-09-10 01:15:24] [DEBUG] Connecting to database cluster at 10.0.0.1:5432...
+[2026-09-10 01:15:24] [DEBUG] Connecting to database cluster at 10.0.0.1:5432...
+[2026-09-10 01:15:24] [DEBUG] Connecting to database cluster at 10.0.0.1:5432...
+[2026-09-10 01:15:25] [VERBOSE] Compiling module chunk 1 of 40...
+[====================>                    ] 50%
+[========================>                ] 60%
+[========================================>] 100%
+\x1b[31m[ERROR]\x1b[0m Failed to load asset bundle: 404 Not Found at https://cdn.example.com/assets/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2.js
+[2026-09-10 01:15:28] [INFO] Build completed with 1 non-fatal error.`,
+
+            headroom_json: `\`\`\`json
+[
+  {
+    "product_id": "PRD-001",
+    "product_name": "Tastiera Meccanica RGB",
+    "category": "Periferiche",
+    "price_eur": 129.99,
+    "in_stock": true
+  },
+  {
+    "product_id": "PRD-002",
+    "product_name": "Mouse Ergonomico Wireless",
+    "category": "Periferiche",
+    "price_eur": 59.50,
+    "in_stock": true
+  },
+  {
+    "product_id": "PRD-003",
+    "product_name": "Monitor 4K 27 pollici",
+    "category": "Schermi",
+    "price_eur": 389.00,
+    "in_stock": false
+  }
+]
+\`\`\``
+        };
+
+        // --- CAVEMAN STOPWORD DICTIONARIES ---
+        const CAVEMAN_DICT = {
+            it: {
+                fillers: [
+                    /\b(per favore|per cortesia|potresti|vorrei che tu|assicurati di|è importante che|tieni presente che|ricorda che|ti sarei davvero molto grato|grazie mille|in anticipo|rimango in attesa|celere riscontro|grazie per la cortesia|agissi come|esperto)\b/gi,
+                    /\b(in modo da|al fine di|allo scopo di|con l'obiettivo di|per quanto riguarda|come già detto|praticamente|sostanzialmente)\b/gi
+                ],
+                articles: /\b(il|lo|la|i|gli|le|un|uno|una|l'|un'|dei|degli|delle)\b/gi,
+                prepositions: /\b(di|a|da|in|con|su|per|tra|fra|del|dello|della|al|allo|alla|ai|agli|alle|dal|dallo|dalla|nel|nello|nella|nei|negli|nelle|sul|sullo|sulla|sui|sugli|sulle)\b/gi,
+                pronouns: /\b(io|tu|lui|lei|noi|voi|loro|mio|tuo|suo|nostro|vostro|loro|questo|quello|questa|quella)\b/gi
+            },
+            en: {
+                fillers: [
+                    /\b(please|kindly|could you|would you|i want you to|i need you to|make sure to|ensure that|it is important to|note that|keep in mind that|i would be very grateful|thanks in advance|act as an expert|as an AI assistant)\b/gi,
+                    /\b(in order to|for the purpose of|with the aim of|as mentioned earlier|basically|actually|essentially)\b/gi
+                ],
+                articles: /\b(a|an|the)\b/gi,
+                prepositions: /\b(of|in|to|for|with|on|at|from|by|about|as|into|through|after|over|between|out|against|during|without|before|under|around|among)\b/gi,
+                pronouns: /\b(i|you|he|she|it|we|they|my|your|his|her|its|our|their|this|that|these|those)\b/gi
+            }
+        };
+
+        // State variables
+        let isSidebarCollapsed = false;
+
+        // Init on Load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadPreset('system_mixed');
+        });
+
+        // Sidebar Toggle Handler (WordPress Style)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleIcon = document.getElementById('sidebarToggleIcon');
+            isSidebarCollapsed = !isSidebarCollapsed;
+
+            if (isSidebarCollapsed) {
+                sidebar.classList.remove('sidebar-expanded');
+                sidebar.classList.add('sidebar-collapsed');
+                toggleIcon.classList.add('rotate-180');
+            } else {
+                sidebar.classList.remove('sidebar-collapsed');
+                sidebar.classList.add('sidebar-expanded');
+                toggleIcon.classList.remove('rotate-180');
+            }
+        }
+
+        function handleLogoClick() {
+            if (isSidebarCollapsed) {
+                toggleSidebar();
+            }
+        }
+
+        // Load Preset Handler
+        function loadPreset(key) {
+            if (!key || !SAMPLE_PROMPTS[key]) return;
+            document.getElementById('rawInput').value = SAMPLE_PROMPTS[key];
+            document.getElementById('presetSelect').value = key;
+            processPrompt();
+        }
+
+        function clearAll() {
+            document.getElementById('rawInput').value = '';
+            document.getElementById('presetSelect').selectedIndex = 0;
+            processPrompt();
+        }
+
+        // Main Orchestrator Function
+        function processPrompt() {
+            const rawText = document.getElementById('rawInput').value;
+            let text = rawText;
+
+            const activeBadgesContainer = document.getElementById('activeBadges');
+            activeBadgesContainer.innerHTML = '';
+            let activeCount = 0;
+
+            // --- 1. LITE MODULE ---
+            if (document.getElementById('mod_lite').checked) {
+                addBadge(activeBadgesContainer, 'Lite', 'bg-sky-500/10 text-sky-400 border-sky-500/20');
+                activeCount++;
+                
+                const trimSpaces = document.getElementById('lite_trim').checked;
+                const removeEmptyLines = document.getElementById('lite_empty_lines').checked;
+                const cleanMarkdown = document.getElementById('lite_markdown').checked;
+
+                if (trimSpaces) {
+                    text = text.split('\n').map(line => line.trim()).join('\n');
+                }
+                if (removeEmptyLines) {
+                    text = text.replace(/\n{3,}/g, '\n\n');
+                }
+                if (cleanMarkdown) {
+                    text = text.replace(/\*\*(\s*)\*\*/g, '')
+                              .replace(/__(\s*)__/g, '')
+                              .replace(/[-*_]{4,}/g, '---');
+                }
+            }
+
+            // --- 2. RTK MODULE (Terminal & Logs) ---
+            if (document.getElementById('mod_rtk').checked) {
+                addBadge(activeBadgesContainer, 'RTK', 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20');
+                activeCount++;
+
+                const removeAnsi = document.getElementById('rtk_ansi').checked;
+                const removeTimestamps = document.getElementById('rtk_timestamps').checked;
+                const dedupe = document.getElementById('rtk_dedupe').checked;
+                const removeProgress = document.getElementById('rtk_progress').checked;
+
+                if (removeAnsi) {
+                    text = text.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-n]/g, '');
+                }
+                if (removeTimestamps) {
+                    text = text.replace(/\b\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?\b/gi, '')
+                              .replace(/\[\d{2}:\d{2}:\d{2}(\.\d+)?\]/g, '')
+                              .replace(/\b\d{2}:\d{2}:\d{2}\b/g, '');
+                }
+                if (removeProgress) {
+                    text = text.replace(/\[[=#>-]+\s*\]\s*\d{1,3}%?/g, '')
+                              .replace(/[██▓▒░\=\-\>\#]{5,}/g, '');
+                }
+                if (dedupe) {
+                    const lines = text.split('\n');
+                    const filtered = [];
+                    let lastLine = '';
+                    let repeatCount = 0;
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (trimmed !== '' && trimmed === lastLine) {
+                            repeatCount++;
+                        } else {
+                            if (repeatCount > 0) {
+                                filtered.push(`[... ${repeatCount + 1}x righe omosse ...]`);
+                                repeatCount = 0;
+                            }
+                            filtered.push(line);
+                            lastLine = trimmed;
+                        }
+                    }
+                    if (repeatCount > 0) {
+                        filtered.push(`[... ${repeatCount + 1}x righe omosse ...]`);
+                    }
+                    text = filtered.join('\n');
+                }
+            }
+
+            // --- 3. HEADROOM MODULE (Data Minify) ---
+            if (document.getElementById('mod_headroom').checked) {
+                addBadge(activeBadgesContainer, 'Headroom', 'bg-purple-500/10 text-purple-400 border-purple-500/20');
+                activeCount++;
+
+                const minifyJson = document.getElementById('headroom_minify').checked;
+                const jsonToCsv = document.getElementById('headroom_csv').checked;
+                const truncateHashes = document.getElementById('headroom_hashes').checked;
+
+                const processJsonContent = (jsonStr) => {
+                    try {
+                        const parsed = JSON.parse(jsonStr.trim());
+
+                        if (jsonToCsv && Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0] !== null) {
+                            const keys = Object.keys(parsed[0]);
+                            const header = keys.join(',');
+                            const rows = parsed.map(obj => keys.map(k => {
+                                let val = obj[k];
+                                if (val === null || val === undefined) return '';
+                                if (typeof val === 'string' && (val.includes(',') || val.includes('\n'))) {
+                                    return `"${val.replace(/"/g, '""')}"`;
+                                }
+                                return val;
+                            }).join(','));
+                            return [header, ...rows].join('\n');
+                        }
+
+                        if (minifyJson) {
+                            return JSON.stringify(parsed);
+                        }
+                    } catch (e) {
+                        // Not valid JSON
+                    }
+                    return jsonStr;
+                };
+
+                text = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, (match, code) => {
+                    const processed = processJsonContent(code);
+                    if (processed !== code) {
+                        return jsonToCsv ? `\`\`\`csv\n${processed}\n\`\`\`` : `\`\`\`json\n${processed}\n\`\`\``;
+                    }
+                    return match;
+                });
+
+                if (truncateHashes) {
+                    text = text.replace(/\b([a-f0-9]{32,64})\b/gi, (match) => match.substring(0, 8) + '...' + match.substring(match.length - 6));
+                }
+            }
+
+            // --- 4. CAVEMAN MODULE (Prose Compression) ---
+            if (document.getElementById('mod_caveman').checked) {
+                addBadge(activeBadgesContainer, 'Caveman', 'bg-amber-500/10 text-amber-400 border-amber-500/20');
+                activeCount++;
+
+                const lang = document.getElementById('caveman_lang').value;
+                const dict = CAVEMAN_DICT[lang] || CAVEMAN_DICT.it;
+
+                const removeFillers = document.getElementById('caveman_fillers').checked;
+                const removeArticles = document.getElementById('caveman_articles').checked;
+                const removePreps = document.getElementById('caveman_preps').checked;
+                const telegraphese = document.getElementById('caveman_telegraph').checked;
+
+                if (removeFillers) {
+                    dict.fillers.forEach(regex => {
+                        text = text.replace(regex, '');
+                    });
+                }
+                if (removeArticles) {
+                    text = text.replace(dict.articles, '');
+                }
+                if (removePreps) {
+                    text = text.replace(dict.prepositions, '');
+                }
+                if (telegraphese) {
+                    text = text.replace(dict.pronouns, '');
+                }
+
+                text = text.replace(/[ \t]{2,}/g, ' ').replace(/\n /g, '\n');
+            }
+
+            // --- CUSTOM WORDS REMOVAL ---
+            const customWordsInput = document.getElementById('customWords').value.trim();
+            if (customWordsInput) {
+                const words = customWordsInput.split(',').map(w => w.trim()).filter(Boolean);
+                words.forEach(w => {
+                    const esc = w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    text = text.replace(new RegExp(`\\b${esc}\\b`, 'gi'), '');
+                });
+                text = text.replace(/[ \t]{2,}/g, ' ');
+            }
+
+            if (activeCount === 0) {
+                activeBadgesContainer.innerHTML = '<span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">Nessuno</span>';
+            }
+
+            document.getElementById('compressedOutput').value = text;
+            updateMetrics(rawText, text);
+            renderDiff(rawText, text);
+        }
+
+        // Token Estimation Heuristics
+        function estimateTokens(str) {
+            if (!str) return 0;
+            const chars = str.length;
+            return Math.ceil(chars / 3.8);
+        }
+
+        function updateMetrics(raw, comp) {
+            const origTok = estimateTokens(raw);
+            const compTok = estimateTokens(comp);
+            const savedTok = Math.max(0, origTok - compTok);
+            const percent = origTok > 0 ? Math.round((savedTok / origTok) * 100) : 0;
+
+            const costSavedPerReq = (savedTok / 1000000) * 3.00;
+            const costSaved10k = costSavedPerReq * 10000;
+
+            document.getElementById('origTokens').innerText = origTok.toLocaleString();
+            document.getElementById('origChars').innerText = `${raw.length.toLocaleString()}c`;
+
+            document.getElementById('compTokens').innerText = compTok.toLocaleString();
+            document.getElementById('compChars').innerText = `${comp.length.toLocaleString()}c`;
+
+            document.getElementById('savingPercent').innerText = `${percent}%`;
+            document.getElementById('savedTokens').innerText = `-${savedTok.toLocaleString()} tok`;
+
+            document.getElementById('savedCost').innerText = `$${costSaved10k.toFixed(3)}`;
+            document.getElementById('inputCharCount').innerText = `${raw.length} car.`;
+            document.getElementById('outputCharCount').innerText = `${comp.length} car.`;
+        }
+
+        function addBadge(container, label, colorClasses) {
+            const badge = document.createElement('span');
+            badge.className = `text-[9px] font-semibold px-1.5 py-0.2 rounded border ${colorClasses}`;
+            badge.innerText = label;
+            container.appendChild(badge);
+        }
+
+        // Diff Viewer Logic (Always active)
+        function renderDiff(orig, comp) {
+            const diffViewer = document.getElementById('diffViewer');
+            if (!orig) {
+                diffViewer.innerHTML = '<span class="text-slate-500 italic">Inserisci un prompt per vedere la differenza...</span>';
+                return;
+            }
+
+            const origWords = orig.split(/(\s+)/);
+            const compWords = new Set(comp.split(/(\s+)/));
+
+            let html = '';
+            origWords.forEach(word => {
+                if (word.trim() === '') {
+                    html += word;
+                } else if (compWords.has(word)) {
+                    html += escapeHtml(word);
+                } else {
+                    html += `<span class="diff-del">${escapeHtml(word)}</span>`;
+                }
+            });
+
+            diffViewer.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        function toggleAllModules(enable) {
+            ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.checked = enable;
+            });
+            processPrompt();
+        }
+
+        function toggleCustomRules() {
+            const panel = document.getElementById('customRulesPanel');
+            const icon = document.getElementById('customRulesIcon');
+            if (panel) {
+                const isHidden = panel.classList.contains('hidden');
+                panel.classList.toggle('hidden');
+                if (icon) {
+                    icon.className = isHidden ? 'fa-solid fa-chevron-up text-slate-500 text-[10px]' : 'fa-solid fa-chevron-down text-slate-500 text-[10px]';
+                }
+            }
+        }
+
+        async function pasteFromClipboard() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    document.getElementById('rawInput').value = text;
+                    processPrompt();
+                    showToast('Testo incollato dagli appunti!');
+                }
+            } catch (err) {
+                showToast('Errore durante la lettura dagli appunti', true);
+            }
+        }
+
+        function copyOutput() {
+            const outputText = document.getElementById('compressedOutput').value;
+            if (!outputText) return;
+
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(outputText).then(() => {
+                    showToast('Copiato negli appunti!');
+                }).catch(() => {
+                    fallbackCopyText(outputText);
+                });
+            } else {
+                fallbackCopyText(outputText);
+            }
+        }
+
+        function fallbackCopyText(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showToast('Copiato negli appunti!');
+            } catch (err) {
+                showToast('Errore durante la copia', true);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function switchMobileTab(tab) {
+            const inputPanel = document.getElementById('inputPanel');
+            const outputPanel = document.getElementById('outputPanel');
+            const btnInput = document.getElementById('tabBtnInput');
+            const btnOutput = document.getElementById('tabBtnOutput');
+
+            if (tab === 'input') {
+                inputPanel.classList.remove('hidden');
+                outputPanel.classList.add('hidden');
+                outputPanel.classList.remove('flex');
+                btnInput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white';
+                btnOutput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400';
+            } else {
+                inputPanel.classList.add('hidden');
+                outputPanel.classList.remove('hidden');
+                outputPanel.classList.add('flex');
+                btnInput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400';
+                btnOutput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white';
+            }
+        }
+
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            if (!toast || !toastMsg) return;
+
+            toastMsg.innerText = message;
+            if (isError) {
+                toast.classList.remove('bg-emerald-600');
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.remove('bg-red-600');
+                toast.classList.add('bg-emerald-600');
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-2');
+            toast.classList.add('opacity-100', 'translate-y-0');
+
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-y-2');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
