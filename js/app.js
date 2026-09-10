@@ -204,6 +204,8 @@ const STAGE_INFO = {
 
 const STORE_KEY = 'llm-compressor-v3';
 
+const MODULE_IDS = ['lite', 'caveman', 'rtk', 'headroom', 'toon', 'prose', 'omniglyph'];
+
 let isSidebarCollapsed = false;
 let currentAggression = 'medium';
 let debounceTimer = null;
@@ -262,7 +264,22 @@ function readOptions() {
     };
 }
 
+function syncModuleStates() {
+    for (const name of MODULE_IDS) {
+        const toggle = $(`mod_${name}`);
+        if (!toggle) continue;
+        const card = toggle.closest('.module-card');
+        if (!card) continue;
+        const on = toggle.checked;
+        card.classList.toggle('module-off', !on);
+        card.querySelectorAll('.sidebar-content input, .sidebar-content select').forEach(el => {
+            el.disabled = !on;
+        });
+    }
+}
+
 function processPrompt() {
+    syncModuleStates();
     const t0 = performance.now();
     const rawText = $('rawInput').value;
     const opts = readOptions();
@@ -721,6 +738,7 @@ function restoreState() {
             $('sidebarToggleIcon').classList.add('rotate-180');
             isSidebarCollapsed = true;
         }
+        syncModuleStates();
     } else {
         applyAggression('medium');
     }

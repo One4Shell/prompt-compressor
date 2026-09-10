@@ -85,6 +85,79 @@
             padding-left: 0;
             padding-right: 0;
         }
+
+        /* ===== Android/Material Style Switches ===== */
+        .switch {
+            -webkit-appearance: none;
+            appearance: none;
+            position: relative;
+            width: 36px;
+            height: 20px;
+            border-radius: 9999px;
+            background: #475569;
+            cursor: pointer;
+            outline: none;
+            margin: 0;
+            flex-shrink: 0;
+            transition: background-color .2s ease;
+        }
+        .switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            border-radius: 9999px;
+            background: #cbd5e1;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+            transition: transform .2s cubic-bezier(.4, 0, .2, 1), background-color .2s ease, width .15s ease;
+        }
+        .switch:checked { background: #6366f1; }
+        .switch:checked::after { transform: translateX(16px); background: #fff; }
+        .switch:active:not(:disabled)::after { width: 18px; }
+        .switch:checked:active:not(:disabled)::after { transform: translateX(14px); }
+        .switch:focus-visible { box-shadow: 0 0 0 2px #080c14, 0 0 0 4px rgba(99, 102, 241, .55); }
+        .switch:disabled { opacity: .35; cursor: not-allowed; }
+
+        /* Compact variant for sub-options */
+        .switch-sm { width: 30px; height: 16px; }
+        .switch-sm::after { width: 12px; height: 12px; }
+        .switch-sm:checked::after { transform: translateX(14px); }
+        .switch-sm:active:not(:disabled)::after { width: 14px; }
+        .switch-sm:checked:active:not(:disabled)::after { transform: translateX(12px); }
+
+        /* Per-module accent color on header switch */
+        .accent-sky .module-switch:checked { background: #0ea5e9; }
+        .accent-amber .module-switch:checked { background: #f59e0b; }
+        .accent-emerald .module-switch:checked { background: #10b981; }
+        .accent-purple .module-switch:checked { background: #a855f7; }
+        .accent-cyan .module-switch:checked { background: #06b6d4; }
+        .accent-rose .module-switch:checked { background: #f43f5e; }
+        .accent-fuchsia .module-switch:checked { background: #d946ef; }
+
+        /* ===== Module accordion + disabled state ===== */
+        .module-body {
+            display: grid;
+            grid-template-rows: 1fr;
+            transition: grid-template-rows .3s cubic-bezier(.4, 0, .2, 1);
+        }
+        .module-body > .sidebar-content {
+            overflow: hidden;
+            min-height: 0;
+            transition: opacity .25s ease, filter .25s ease;
+        }
+        .module-off .module-body { grid-template-rows: 0fr; }
+        .module-off .sidebar-content {
+            opacity: .4;
+            filter: grayscale(.75);
+            pointer-events: none;
+        }
+        .module-icon, .module-title { transition: opacity .25s ease; }
+        .module-off .module-icon,
+        .module-off .module-title { opacity: .45; }
+        .module-card.module-off,
+        .module-card.module-off:hover { border-color: rgba(27, 36, 54, .55); }
     </style>
 </head>
 <body class="bg-darkbg text-slate-200 font-sans h-full min-h-screen flex overflow-hidden selection:bg-brand-500 selection:text-white">
@@ -118,7 +191,7 @@
                 <i class="fa-solid fa-check-double text-[10px]"></i> Abilita tutti
             </button>
             <button onclick="toggleAllModules(false)" class="sidebar-text text-[11px] text-slate-400 hover:text-slate-200 transition flex items-center gap-1">
-                Disabilita
+                Disabilita tutti
             </button>
         </div>
 
@@ -139,231 +212,245 @@
         <div class="sidebar-hide-collapsed flex-1 overflow-y-auto p-3 space-y-3">
             
             <!-- 1. LITE MODULE -->
-            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
-                <div class="flex items-center justify-between">
-                    <label for="mod_lite" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_lite" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
-                        <span class="flex items-center gap-2 truncate">
-                            <i class="fa-solid fa-broom text-sky-400 text-xs w-4 text-center"></i>
-                            <span class="sidebar-text">Lite Clean</span>
-                        </span>
+            <div class="module-card accent-sky bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="mod_lite" class="flex items-center gap-2 font-semibold text-xs text-slate-200 cursor-pointer min-w-0">
+                        <i class="fa-solid fa-broom module-icon text-sky-400 text-xs w-4 text-center shrink-0"></i>
+                        <span class="sidebar-text module-title truncate">Lite Clean</span>
                     </label>
-                    <span class="sidebar-text text-[9px] font-mono uppercase bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/20 shrink-0">String</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="sidebar-text text-[9px] font-mono uppercase bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded border border-sky-500/20">String</span>
+                        <input type="checkbox" id="mod_lite" checked onchange="onOptionChange()" class="switch module-switch" role="switch">
+                    </div>
                 </div>
-                
-                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-sky-500/20">
-                    <p class="text-[10px] text-slate-400 mb-1">Pulizia spazi e markdown superfluo.</p>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="lite_trim" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Trim spazi inizio/fine riga
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="lite_empty_lines" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Elimina righe vuote multiple
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="lite_markdown" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Pulisci markdown vuoto (*, _)
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="lite_strip" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Rimuovi formattazione markdown/HTML
-                    </label>
+
+                <div class="module-body">
+                    <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-sky-500/20">
+                        <p class="text-[10px] text-slate-400 mb-1">Pulizia spazi e markdown superfluo.</p>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Trim spazi inizio/fine riga</span>
+                            <input type="checkbox" id="lite_trim" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Elimina righe vuote multiple</span>
+                            <input type="checkbox" id="lite_empty_lines" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Pulisci markdown vuoto (*, _)</span>
+                            <input type="checkbox" id="lite_markdown" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Rimuovi formattazione markdown/HTML</span>
+                            <input type="checkbox" id="lite_strip" onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                    </div>
                 </div>
             </div>
 
             <!-- 2. CAVEMAN MODULE -->
-            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
-                <div class="flex items-center justify-between">
-                    <label for="mod_caveman" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_caveman" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
-                        <span class="flex items-center gap-2 truncate">
-                            <i class="fa-solid fa-user-ninja text-amber-400 text-xs w-4 text-center"></i>
-                            <span class="sidebar-text">Caveman</span>
-                        </span>
+            <div class="module-card accent-amber bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="mod_caveman" class="flex items-center gap-2 font-semibold text-xs text-slate-200 cursor-pointer min-w-0">
+                        <i class="fa-solid fa-user-ninja module-icon text-amber-400 text-xs w-4 text-center shrink-0"></i>
+                        <span class="sidebar-text module-title truncate">Caveman</span>
                     </label>
-                    <span class="sidebar-text text-[9px] font-mono uppercase bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20 shrink-0">Prose</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="sidebar-text text-[9px] font-mono uppercase bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">Prose</span>
+                        <input type="checkbox" id="mod_caveman" checked onchange="onOptionChange()" class="switch module-switch" role="switch">
+                    </div>
                 </div>
 
-                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-amber-500/20">
-                    <div class="flex items-center justify-between mb-1.5">
-                        <span class="text-[10px] text-slate-400">Lingua Regole:</span>
-                        <select id="caveman_lang" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none">
-                            <option value="it" selected>Italiano</option>
-                            <option value="en">Inglese</option>
-                        </select>
+                <div class="module-body">
+                    <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-amber-500/20">
+                        <div class="flex items-center justify-between mb-1.5 gap-2">
+                            <span class="text-[10px] text-slate-400">Lingua Regole:</span>
+                            <select id="caveman_lang" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none cursor-pointer">
+                                <option value="it" selected>Italiano</option>
+                                <option value="en">Inglese</option>
+                            </select>
+                        </div>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Rimuovi cortesie ("Per favore...")</span>
+                            <input type="checkbox" id="caveman_fillers" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Rimuovi articoli (il, la, the...)</span>
+                            <input type="checkbox" id="caveman_articles" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Rimuovi preposizioni</span>
+                            <input type="checkbox" id="caveman_preps" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Telegrafico (Rimuovi pronomi)</span>
+                            <input type="checkbox" id="caveman_telegraph" onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Rimuovi intensificatori (davvero, molto...)</span>
+                            <input type="checkbox" id="caveman_intensifiers" onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
                     </div>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_fillers" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Rimuovi cortesie ("Per favore...")
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_articles" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Rimuovi articoli (il, la, the...)
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_preps" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Rimuovi preposizioni
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_telegraph" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Telegrafico (Rimuovi pronomi)
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="caveman_intensifiers" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Rimuovi intensificatori (davvero, molto...)
-                    </label>
                 </div>
             </div>
 
             <!-- 3. RTK MODULE -->
-            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
-                <div class="flex items-center justify-between">
-                    <label for="mod_rtk" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_rtk" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
-                        <span class="flex items-center gap-2 truncate">
-                            <i class="fa-solid fa-terminal text-emerald-400 text-xs w-4 text-center"></i>
-                            <span class="sidebar-text">RTK Filter</span>
-                        </span>
+            <div class="module-card accent-emerald bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="mod_rtk" class="flex items-center gap-2 font-semibold text-xs text-slate-200 cursor-pointer min-w-0">
+                        <i class="fa-solid fa-terminal module-icon text-emerald-400 text-xs w-4 text-center shrink-0"></i>
+                        <span class="sidebar-text module-title truncate">RTK Filter</span>
                     </label>
-                    <span class="sidebar-text text-[9px] font-mono uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20 shrink-0">Logs</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="sidebar-text text-[9px] font-mono uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded border border-emerald-500/20">Logs</span>
+                        <input type="checkbox" id="mod_rtk" checked onchange="onOptionChange()" class="switch module-switch" role="switch">
+                    </div>
                 </div>
 
-                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-emerald-500/20">
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_ansi" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Rimuovi colori ANSI (`\x1b[31m`)
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_timestamps" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Rimuovi Timestamp e Date
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_dedupe" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Deduplica log identici
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_progress" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Elimina barre progresso/spinner
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_counters" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Collassa righe con contatori/indirizzi
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="rtk_stacktrace" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Rimuovi stack-trace
-                    </label>
+                <div class="module-body">
+                    <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-emerald-500/20">
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Rimuovi colori ANSI (`\x1b[31m`)</span>
+                            <input type="checkbox" id="rtk_ansi" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Rimuovi Timestamp e Date</span>
+                            <input type="checkbox" id="rtk_timestamps" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Deduplica log identici</span>
+                            <input type="checkbox" id="rtk_dedupe" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Elimina barre progresso/spinner</span>
+                            <input type="checkbox" id="rtk_progress" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Collassa righe con contatori/indirizzi</span>
+                            <input type="checkbox" id="rtk_counters" onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Rimuovi stack-trace</span>
+                            <input type="checkbox" id="rtk_stacktrace" onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                    </div>
                 </div>
             </div>
 
             <!-- 4. HEADROOM MODULE -->
-            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
-                <div class="flex items-center justify-between">
-                    <label for="mod_headroom" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_headroom" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
-                        <span class="flex items-center gap-2 truncate">
-                            <i class="fa-solid fa-code text-purple-400 text-xs w-4 text-center"></i>
-                            <span class="sidebar-text">Headroom</span>
-                        </span>
+            <div class="module-card accent-purple bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="mod_headroom" class="flex items-center gap-2 font-semibold text-xs text-slate-200 cursor-pointer min-w-0">
+                        <i class="fa-solid fa-code module-icon text-purple-400 text-xs w-4 text-center shrink-0"></i>
+                        <span class="sidebar-text module-title truncate">Headroom</span>
                     </label>
-                    <span class="sidebar-text text-[9px] font-mono uppercase bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/20 shrink-0">Data</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="sidebar-text text-[9px] font-mono uppercase bg-purple-500/10 text-purple-400 px-1.5 py-0.5 rounded border border-purple-500/20">Data</span>
+                        <input type="checkbox" id="mod_headroom" checked onchange="onOptionChange()" class="switch module-switch" role="switch">
+                    </div>
                 </div>
 
-                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-purple-500/20">
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="headroom_minify" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Minifica JSON
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="headroom_csv" checked onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Converti Array JSON in CSV
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="headroom_hashes" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Tronca Hash hex lunghi
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="headroom_base64" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Tronca Base64/Token lunghi
-                    </label>
-                    <label class="flex items-center gap-2 text-slate-300 cursor-pointer hover:text-white">
-                        <input type="checkbox" id="headroom_stripkeys" onchange="onOptionChange()" class="rounded text-brand-600 bg-slate-800 border-slate-700">
-                        Scarta chiavi JSON (solo valori)
-                    </label>
+                <div class="module-body">
+                    <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-purple-500/20">
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Minifica JSON</span>
+                            <input type="checkbox" id="headroom_minify" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Converti Array JSON in CSV</span>
+                            <input type="checkbox" id="headroom_csv" checked onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Tronca Hash hex lunghi</span>
+                            <input type="checkbox" id="headroom_hashes" onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Tronca Base64/Token lunghi</span>
+                            <input type="checkbox" id="headroom_base64" onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                        <label class="flex items-center justify-between gap-2 text-slate-300 cursor-pointer hover:text-white">
+                            <span>Scarta chiavi JSON (solo valori)</span>
+                            <input type="checkbox" id="headroom_stripkeys" onchange="onOptionChange()" class="switch switch-sm" role="switch">
+                        </label>
+                    </div>
                 </div>
             </div>
 
             <!-- 5. TOON MODULE -->
-            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
-                <div class="flex items-center justify-between">
-                    <label for="mod_toon" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_toon" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
-                        <span class="flex items-center gap-2 truncate">
-                            <i class="fa-solid fa-object-group text-cyan-400 text-xs w-4 text-center"></i>
-                            <span class="sidebar-text">TOON</span>
-                        </span>
+            <div class="module-card accent-cyan bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="mod_toon" class="flex items-center gap-2 font-semibold text-xs text-slate-200 cursor-pointer min-w-0">
+                        <i class="fa-solid fa-object-group module-icon text-cyan-400 text-xs w-4 text-center shrink-0"></i>
+                        <span class="sidebar-text module-title truncate">TOON</span>
                     </label>
-                    <span class="sidebar-text text-[9px] font-mono uppercase bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 shrink-0">JSON→TOON</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="sidebar-text text-[9px] font-mono uppercase bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20">JSON→TOON</span>
+                        <input type="checkbox" id="mod_toon" checked onchange="onOptionChange()" class="switch module-switch" role="switch">
+                    </div>
                 </div>
 
-                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-cyan-500/20">
-                    <p class="text-[10px] text-slate-400 mb-1">Token-Oriented Object Notation: serializza JSON in forma compatta, con strutture tabulari per array di oggetti uniformi.</p>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <span class="text-[10px] text-slate-400">Delimiter:</span>
-                        <select id="toon_delimiter" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none">
-                            <option value="," selected>Virgola</option>
-                            <option value="&#9;">Tab (più compatto)</option>
-                            <option value="|">Pipe</option>
-                        </select>
+                <div class="module-body">
+                    <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-cyan-500/20">
+                        <p class="text-[10px] text-slate-400 mb-1">Token-Oriented Object Notation: serializza JSON in forma compatta, con strutture tabulari per array di oggetti uniformi.</p>
+                        <div class="flex items-center justify-between mb-1.5 gap-2">
+                            <span class="text-[10px] text-slate-400">Delimiter:</span>
+                            <select id="toon_delimiter" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none cursor-pointer">
+                                <option value="," selected>Virgola</option>
+                                <option value="&#9;">Tab (più compatto)</option>
+                                <option value="|">Pipe</option>
+                            </select>
+                        </div>
+                        <p class="text-[9px] text-slate-500">Converte JSON (anche fuori dai fence) in blocchi <span class="font-mono">```toon</span>.</p>
                     </div>
-                    <p class="text-[9px] text-slate-500">Converte JSON (anche fuori dai fence) in blocchi <span class="font-mono">```toon</span>.</p>
                 </div>
             </div>
 
             <!-- 6. PROSE COMPRESS MODULE -->
-            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
-                <div class="flex items-center justify-between">
-                    <label for="mod_prose" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_prose" onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
-                        <span class="flex items-center gap-2 truncate">
-                            <i class="fa-solid fa-feather text-rose-400 text-xs w-4 text-center"></i>
-                            <span class="sidebar-text">Prose Compress</span>
-                        </span>
+            <div class="module-card accent-rose bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="mod_prose" class="flex items-center gap-2 font-semibold text-xs text-slate-200 cursor-pointer min-w-0">
+                        <i class="fa-solid fa-feather module-icon text-rose-400 text-xs w-4 text-center shrink-0"></i>
+                        <span class="sidebar-text module-title truncate">Prose Compress</span>
                     </label>
-                    <span class="sidebar-text text-[9px] font-mono uppercase bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/20 shrink-0">Aggr.</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="sidebar-text text-[9px] font-mono uppercase bg-rose-500/10 text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/20">Aggr.</span>
+                        <input type="checkbox" id="mod_prose" onchange="onOptionChange()" class="switch module-switch" role="switch">
+                    </div>
                 </div>
 
-                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-rose-500/20">
-                    <p class="text-[10px] text-slate-400 mb-1">Rimuove cliché, frasi ponte e formule a bassa informazione.</p>
+                <div class="module-body">
+                    <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-rose-500/20">
+                        <p class="text-[10px] text-slate-400 mb-1">Rimuove cliché, frasi ponte e formule a bassa informazione.</p>
+                    </div>
                 </div>
             </div>
 
             <!-- 7. OMNIGLYPH MODULE -->
-            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
-                <div class="flex items-center justify-between">
-                    <label for="mod_omniglyph" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
-                        <input type="checkbox" id="mod_omniglyph" onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
-                        <span class="flex items-center gap-2 truncate">
-                            <i class="fa-solid fa-image text-fuchsia-400 text-xs w-4 text-center"></i>
-                            <span class="sidebar-text">OmniGlyph</span>
-                        </span>
+            <div class="module-card accent-fuchsia bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between gap-2">
+                    <label for="mod_omniglyph" class="flex items-center gap-2 font-semibold text-xs text-slate-200 cursor-pointer min-w-0">
+                        <i class="fa-solid fa-image module-icon text-fuchsia-400 text-xs w-4 text-center shrink-0"></i>
+                        <span class="sidebar-text module-title truncate">OmniGlyph</span>
                     </label>
-                    <span class="sidebar-text text-[9px] font-mono uppercase bg-fuchsia-500/10 text-fuchsia-400 px-1.5 py-0.5 rounded border border-fuchsia-500/20 shrink-0">PNG</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="sidebar-text text-[9px] font-mono uppercase bg-fuchsia-500/10 text-fuchsia-400 px-1.5 py-0.5 rounded border border-fuchsia-500/20">PNG</span>
+                        <input type="checkbox" id="mod_omniglyph" onchange="onOptionChange()" class="switch module-switch" role="switch">
+                    </div>
                 </div>
 
-                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-fuchsia-500/20">
-                    <p class="text-[10px] text-slate-400 mb-1">Trasforma l'output compresso in pagine PNG che i modelli vision leggono al posto del testo. I token immagine sono fatturati per dimensione ((w×h)/750), non per caratteri. Con OmniGlyph attivo i blocchi JSON vengono minificati automaticamente nell'immagine e il layout massimizza il testo per pagina: l'output testuale non cambia.</p>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <span class="text-[10px] text-slate-400">Densità testo:</span>
-                        <select id="omniglyph_density" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none">
-                            <option value="auto" selected>Auto (max testo su 1 pag)</option>
-                            <option value="readable">Leggibile (16px)</option>
-                            <option value="compact">Compatto (13px)</option>
-                            <option value="dense">Denso (10px)</option>
-                        </select>
+                <div class="module-body">
+                    <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-fuchsia-500/20">
+                        <p class="text-[10px] text-slate-400 mb-1">Trasforma l'output compresso in pagine PNG che i modelli vision leggono al posto del testo. I token immagine sono fatturati per dimensione ((w×h)/750), non per caratteri. Con OmniGlyph attivo i blocchi JSON vengono minificati automaticamente nell'immagine e il layout massimizza il testo per pagina: l'output testuale non cambia.</p>
+                        <div class="flex items-center justify-between mb-1.5 gap-2">
+                            <span class="text-[10px] text-slate-400">Densità testo:</span>
+                            <select id="omniglyph_density" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none cursor-pointer">
+                                <option value="auto" selected>Auto (max testo su 1 pag)</option>
+                                <option value="readable">Leggibile (16px)</option>
+                                <option value="compact">Compatto (13px)</option>
+                                <option value="dense">Denso (10px)</option>
+                            </select>
+                        </div>
+                        <p class="text-[9px] text-slate-500">Solo route Anthropic diretta: il risparmio si applica ai modelli che fatturano le immagini per area, non per caratteri.</p>
                     </div>
-                    <p class="text-[9px] text-slate-500">Solo route Anthropic diretta: il risparmio si applica ai modelli che fatturano le immagini per area, non per caratteri.</p>
                 </div>
             </div>
 

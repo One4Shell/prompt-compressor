@@ -17,7 +17,7 @@ L'elaborazione è **100% client-side**: il testo non lascia mai il browser.
 - Regole personalizzate (parole/termini da rimuovere)
 - 6 prompt demo precaricati
 - **Persistenza dello stato** in `localStorage` (sidebar, opzioni, lingua, parole personalizzate, modello costi)
-- Sidebar collapsible, tema scuro, layout responsive (desktop affiancato, mobile a tab)
+- Sidebar collapsible, tema scuro, layout responsive (desktop affiancato, mobile a tab). Interruttori stile Material Design: le opzioni dei moduli disattivati vengono collassate, opacizzate e rese non interattive
 - Nessuna build, nessun backend, nessuna dipendenza locale
 - Debounce dell'elaborazione (150 ms) per una digitazione fluida
 
