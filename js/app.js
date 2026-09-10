@@ -208,6 +208,7 @@ const MODULE_IDS = ['lite', 'caveman', 'rtk', 'headroom', 'toon', 'prose', 'omni
 
 let isSidebarCollapsed = false;
 let currentAggression = 'medium';
+let toonAutoDisabled = false;
 let debounceTimer = null;
 let outputView = 'text';
 let glyphState = { active: false, pages: [], urls: [], current: 0, tokens: 0, pageTokens: 0 };
@@ -243,7 +244,7 @@ function readOptions() {
             stripKeys: $('headroom_stripkeys').checked
         },
         toon: {
-            on: $('mod_toon').checked,
+            on: $('mod_toon').checked && !toonAutoDisabled,
             delimiter: $('toon_delimiter').value
         },
         caveman: {
@@ -270,18 +271,45 @@ function syncModuleStates() {
         if (!toggle) continue;
         const card = toggle.closest('.module-card');
         if (!card) continue;
-        const on = toggle.checked;
+        const autoOff = name === 'toon' && toonAutoDisabled;
+        const on = toggle.checked && !autoOff;
         card.classList.toggle('module-off', !on);
         card.querySelectorAll('.sidebar-content input, .sidebar-content select').forEach(el => {
             el.disabled = !on;
         });
+        if (name === 'toon') {
+            toggle.disabled = autoOff;
+            toggle.title = autoOff ? 'TOON disattivato: aumenterebbe i token per questo input' : '';
+        }
     }
 }
 
+function toonWorsensTokens(rawText, baseOpts) {
+    if (!$('mod_toon').checked) return false;
+    const opts = Object.assign({}, baseOpts, {
+        toon: Object.assign({}, baseOpts.toon, { on: true })
+    });
+    let before = rawText;
+    let after = null;
+    let seen = false;
+    CompressorModules.runAll(rawText, opts, (name, text) => {
+        if (name === 'toon') {
+            seen = true;
+            after = text;
+        } else {
+            before = text;
+        }
+    });
+    if (!seen || after === null) return false;
+    return CompressorTokenizer.count(after) > CompressorTokenizer.count(before);
+}
+
 function processPrompt() {
-    syncModuleStates();
     const t0 = performance.now();
     const rawText = $('rawInput').value;
+    const probeOpts = readOptions();
+    toonAutoDisabled = toonWorsensTokens(rawText, probeOpts);
+    syncModuleStates();
     const opts = readOptions();
 
     const activeBadgesContainer = $('activeBadges');
@@ -915,7 +943,7 @@ window.addEventListener('DOMContentLoaded', () => {
         loadPreset('system_mixed');
     }
     CompressorTokenizer.init().then(() => {
-        updateMetrics($('rawInput').value, $('compressedOutput').value);
+        processPrompt();
     });
 });
 
