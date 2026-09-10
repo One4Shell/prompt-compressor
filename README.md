@@ -7,6 +7,7 @@ L'elaborazione è **100% client-side**: il testo non lascia mai il browser.
 ## Caratteristiche
 
 - Compressione tramite 6 moduli indipendenti, attivabili/disattivabili singolarmente o in blocco
+- **OmniGlyph (opzionale)**: output della pipeline renderizzato come pagine PNG ottimizzate per i modelli vision (solo route Anthropic diretta)
 - **Contatore token reale BPE** (`cl100k_base` via `gpt-tokenizer`) con fallback automatico all'euristica `char/3.8` se offline
 - **Slider di aggressività** (Leggera / Media / Estrema) che applica profili di regole predefiniti
 - **Analisi per modulo**: quanti token risparmia ogni singolo modulo
@@ -63,7 +64,7 @@ Compressione di dati strutturati.
 
 | Opzione | Effetto |
 |---|---|
-| Minifica JSON | Serializza JSON senza indentazione (anche fuori dai fence) |
+| Minifica JSON | Serializza JSON senza indentazione: tutti i blocchi JSON del testo (nei fence, nudi in testo misto, o intero prompt), purché validi e ad inizio riga |
 | Converti Array JSON in CSV | Trasforma array di oggetti in CSV con header dai nomi chiave |
 | Scarta chiavi JSON | Array di oggetti → array di soli valori (massimo risparmio) |
 | Tronca Hash hex lunghi | Riduce hash hex 32-64 char a `primi 8...ultimi 6` |
@@ -71,7 +72,7 @@ Compressione di dati strutturati.
 
 ### TOON
 
-Conversione di dati JSON in **TOON (Token-Oriented Object Notation)** — una codifica compatta del modello dati JSON, studiata per minimizzare i token mantenendo la struttura esplicita. Converte il JSON (dentro o fuori i code fence) in blocchi ```toon```.
+Conversione di dati JSON in **TOON (Token-Oriented Object Notation)** — una codifica compatta del modello dati JSON, studiata per minimizzare i token mantenendo la struttura esplicita. Converte tutti i blocchi JSON del prompt (nei fence, nudi in testo misto, o intero prompt) in blocchi ```toon```.
 
 | Opzione | Effetto |
 |---|---|
@@ -86,6 +87,18 @@ Rimozione di cliché e frasi ponte a bassa informazione ("In conclusione, va not
 ### Parole/Regex personalizzate
 
 Campo in sidebar per termini separati da virgola. Ogni termine viene rimosso come parola intera (word boundary). Accetta anche pattern regex.
+
+### OmniGlyph
+
+Compressione del contesto come immagine. Esegue il rendering dell'output compresso (prompt di sistema, documentazione strumenti, cronologia densa) come pagine PNG compatte che il modello vision legge al posto del testo. I token immagine vengono fatturati in base alle dimensioni anziché ai caratteri — `(larghezza × altezza) / 750` per pagina — quindi il blocco convertito costa sensibilmente meno. **Solo route Anthropic diretta**; disattivato di default in tutti i profili di aggressività.
+
+Quando OmniGlyph è attivo, prima del rendering il testo viene ottimizzato **solo per l'immagine** (l'output testuale della pipeline resta invariato): i blocchi JSON vengono minificati — indentazione e fence ```json rimossi, con fallback silenzioso su JSON non valido — e lo spreco whitespace viene eliminato (trailing space, righe vuote multiple collassate). Nessun conflitto con Headroom: se il JSON è già stato convertito in CSV/TOON il contenuto passa invariato.
+
+| Opzione | Effetto |
+|---|---|
+| Densità testo | **Auto** (default): il font più grande (16→10px) che tiene tutto su una sola pagina, altrimenti 10px; oppure Leggibile (16px), Compatto (13px) o Denso (10px) |
+
+Le pagine sono ottimizzate per la pipeline vision di Claude: 1152×998 px (~1,15 megapixel, entro il limite di 1568px sul lato lungo che evita il downsampling interno), alto contrasto bianco/nero, font monospace, interlinea compatta (1.2), metriche di riga a sub-pixel e footer ridotto per massimizzare i caratteri per pagina a parità di token immagine. Se il testo sfonda una pagina viene paginato automaticamente. Quando attivo, il pannello output offre un selettore Testo/Immagine con anteprima, navigazione pagine, copia PNG negli appunti e download. Il conteggio "Compressi" e il risparmio vengono ricalcolati sui token immagine (badge `IMG`).
 
 ## Aggressività
 
@@ -105,7 +118,7 @@ Dopo aver scelto un profilo puoi comunque rifinire le singole opzioni a mano.
 - **Attivi**: badge dei moduli correntemente abilitati
 - **Analizza per modulo**: mostra i token risparmiati da ogni modulo attivo
 
-Il badge accanto alle metriche indica il metodo di conteggio: **BPE** (reale, via CDN) o **stima** (euristica `char/3.8`, fallback offline).
+Il badge accanto alle metriche indica il metodo di conteggio: **BPE** (reale, via CDN), **stima** (euristica `char/3.8`, fallback offline) o **IMG** (token immagine Anthropic `(w×h)/750` per pagina, quando OmniGlyph è attivo).
 
 ## Prompt demo
 
@@ -163,6 +176,7 @@ prompt-compressor/
     ├── tokenizer.js  # BPE via CDN + fallback euristico
     ├── modules.js    # Pipeline dei moduli di compressione
     ├── toon.js       # Encoder JSON→TOON (spec TOON v4.1)
+    ├── omniglyph.js  # Renderer testo→PNG per modelli vision (Anthropic): minifica JSON nel PNG, densità auto
     ├── diff.js       # Diff Myers O(ND) + word diff
     └── app.js        # Orchestrazione, metriche, costi, stato
 ```

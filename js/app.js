@@ -171,7 +171,7 @@ const AGGRESSION = {
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: false, headroom_base64: false, headroom_stripkeys: false,
         mod_toon: true, toon_delimiter: ',',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: false, caveman_intensifiers: false,
-        mod_prose: false
+        mod_prose: false, mod_omniglyph: false
     },
     medium: {
         mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true,
@@ -179,7 +179,7 @@ const AGGRESSION = {
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: true, headroom_base64: true, headroom_stripkeys: false,
         mod_toon: true, toon_delimiter: ',',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: false, caveman_intensifiers: true,
-        mod_prose: false
+        mod_prose: false, mod_omniglyph: false
     },
     extreme: {
         mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true,
@@ -187,7 +187,7 @@ const AGGRESSION = {
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: true, headroom_base64: true, headroom_stripkeys: true,
         mod_toon: true, toon_delimiter: '\t',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: true, caveman_intensifiers: true,
-        mod_prose: true
+        mod_prose: true, mod_omniglyph: false
     }
 };
 
@@ -198,6 +198,7 @@ const STAGE_INFO = {
     toon: { label: 'TOON', cls: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20', bar: 'bg-cyan-500' },
     caveman: { label: 'Caveman', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', bar: 'bg-amber-500' },
     prose: { label: 'Prose Compress', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20', bar: 'bg-rose-500' },
+    omniglyph: { label: 'OmniGlyph', cls: 'bg-fuchsia-500/10 text-fuchsia-400 border-fuchsia-500/20', bar: 'bg-fuchsia-500' },
     custom: { label: 'Parole/Regex', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20', bar: 'bg-slate-500' }
 };
 
@@ -206,6 +207,9 @@ const STORE_KEY = 'llm-compressor-v3';
 let isSidebarCollapsed = false;
 let currentAggression = 'medium';
 let debounceTimer = null;
+let outputView = 'text';
+let glyphState = { active: false, pages: [], urls: [], current: 0, tokens: 0, pageTokens: 0 };
+let glyphSeq = 0;
 
 function $(id) { return document.getElementById(id); }
 
@@ -249,6 +253,10 @@ function readOptions() {
             intensifiers: $('caveman_intensifiers').checked
         },
         prose: { on: $('mod_prose').checked, lang: $('caveman_lang').value },
+        omniglyph: {
+            on: $('mod_omniglyph').checked,
+            density: $('omniglyph_density').value
+        },
         custom: { on: words.length > 0, words }
     };
 }
@@ -262,7 +270,7 @@ function processPrompt() {
     activeBadgesContainer.innerHTML = '';
     let activeCount = 0;
 
-    const order = ['lite', 'rtk', 'headroom', 'caveman', 'prose', 'toon'];
+    const order = ['lite', 'rtk', 'headroom', 'caveman', 'prose', 'toon', 'omniglyph'];
     for (const name of order) {
         if (opts[name] && opts[name].on) {
             addBadge(activeBadgesContainer, STAGE_INFO[name].label, STAGE_INFO[name].cls);
@@ -284,7 +292,110 @@ function processPrompt() {
     updateMetrics(rawText, text);
     CompressorDiff.render(rawText, text);
 
+    if (opts.omniglyph.on) {
+        renderGlyph(text, opts.omniglyph.density);
+    } else {
+        disableGlyph();
+    }
+
     $('procTime').innerText = `${(performance.now() - t0).toFixed(1)} ms`;
+}
+
+async function renderGlyph(text, density) {
+    const seq = ++glyphSeq;
+    glyphState.active = true;
+    $('outputViewToggle').classList.remove('hidden');
+    try {
+        if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    } catch (e) {}
+    if (seq !== glyphSeq) return;
+
+    const res = OmniGlyph.render(text, density);
+    glyphState.pages = res.pages;
+    glyphState.urls = new Array(res.pages.length).fill(null);
+    glyphState.current = Math.min(glyphState.current, Math.max(0, res.pages.length - 1));
+    glyphState.tokens = res.tokens;
+    glyphState.pageTokens = res.pageTokens;
+    updateGlyphViewer();
+    updateMetrics($('rawInput').value, $('compressedOutput').value);
+}
+
+function disableGlyph() {
+    if (!glyphState.active && outputView === 'text' && $('outputViewToggle').classList.contains('hidden')) return;
+    glyphSeq++;
+    glyphState = { active: false, pages: [], urls: [], current: 0, tokens: 0, pageTokens: 0 };
+    $('outputViewToggle').classList.add('hidden');
+    if (outputView === 'image') switchOutputView('text');
+    updateMetrics($('rawInput').value, $('compressedOutput').value);
+}
+
+function updateGlyphViewer() {
+    const n = glyphState.pages.length;
+    const prev = $('glyphPrev');
+    const next = $('glyphNext');
+    if (n === 0) {
+        $('glyphPageInfo').innerText = 'nessun contenuto';
+        $('glyphImage').removeAttribute('src');
+        prev.disabled = true;
+        next.disabled = true;
+        prev.classList.add('opacity-40', 'cursor-not-allowed');
+        next.classList.add('opacity-40', 'cursor-not-allowed');
+        return;
+    }
+    prev.disabled = n <= 1;
+    next.disabled = n <= 1;
+    prev.classList.toggle('opacity-40', n <= 1);
+    prev.classList.toggle('cursor-not-allowed', n <= 1);
+    next.classList.toggle('opacity-40', n <= 1);
+    next.classList.toggle('cursor-not-allowed', n <= 1);
+
+    const i = glyphState.current;
+    if (!glyphState.urls[i]) glyphState.urls[i] = glyphState.pages[i].toDataURL('image/png');
+    $('glyphImage').src = glyphState.urls[i];
+    const perPage = glyphState.pageTokens || OmniGlyph.pageTokens();
+    $('glyphPageInfo').innerText = `pag ${i + 1}/${n} · ${perPage.toLocaleString()} tok/pag`;
+}
+
+function glyphNav(delta) {
+    const n = glyphState.pages.length;
+    if (n === 0) return;
+    glyphState.current = (glyphState.current + delta + n) % n;
+    updateGlyphViewer();
+}
+
+function switchOutputView(view) {
+    outputView = view;
+    const isText = view === 'text';
+    $('diffViewer').classList.toggle('hidden', !isText);
+    $('glyphViewer').classList.toggle('hidden', isText);
+    $('glyphViewer').classList.toggle('flex', !isText);
+    $('outputLabel').innerText = isText ? 'Output Compresso (Diff)' : 'Output OmniGlyph (PNG)';
+    $('viewBtnText').className = isText
+        ? 'px-2 py-0.5 text-[10px] font-semibold rounded-l-lg bg-brand-600 text-white border-r border-slate-700'
+        : 'px-2 py-0.5 text-[10px] font-semibold rounded-l-lg bg-slate-800 text-slate-400 hover:bg-slate-700 border-r border-slate-700';
+    $('viewBtnImage').className = !isText
+        ? 'px-2 py-0.5 text-[10px] font-semibold rounded-r-lg bg-brand-600 text-white'
+        : 'px-2 py-0.5 text-[10px] font-semibold rounded-r-lg bg-slate-800 text-slate-400 hover:bg-slate-700';
+}
+
+async function downloadGlyph() {
+    const page = glyphState.pages[glyphState.current];
+    if (!page) return;
+    try {
+        const blob = await OmniGlyph.toBlob(page);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        const suffix = glyphState.pages.length > 1 ? `-p${glyphState.current + 1}of${glyphState.pages.length}` : '';
+        a.href = url;
+        a.download = `omniglyph${suffix}.png`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        showToast('PNG scaricato!');
+    } catch (err) {
+        showToast('Errore durante la generazione del PNG', true);
+    }
 }
 
 function scheduleProcess() {
@@ -298,8 +409,9 @@ function onOptionChange() {
 }
 
 function updateMetrics(raw, comp) {
+    const useImg = glyphState.active;
     const origTok = CompressorTokenizer.count(raw);
-    const compTok = CompressorTokenizer.count(comp);
+    const compTok = useImg ? glyphState.tokens : CompressorTokenizer.count(comp);
     const savedTok = Math.max(0, origTok - compTok);
     const percent = origTok > 0 ? Math.round((savedTok / origTok) * 100) : 0;
 
@@ -310,16 +422,25 @@ function updateMetrics(raw, comp) {
     $('origTokens').innerText = origTok.toLocaleString();
     $('origChars').innerText = `${raw.length.toLocaleString()}c`;
     $('compTokens').innerText = compTok.toLocaleString();
-    $('compChars').innerText = `${comp.length.toLocaleString()}c`;
+    $('compChars').innerText = useImg ? `${glyphState.pages.length.toLocaleString()} pag` : `${comp.length.toLocaleString()}c`;
     $('savingPercent').innerText = `${percent}%`;
     $('savedTokens').innerText = `-${savedTok.toLocaleString()} tok`;
     $('savedCost').innerText = `$${savedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
     $('inputCharCount').innerText = `${raw.length} car.`;
-    $('outputCharCount').innerText = `${comp.length} car.`;
-    $('tokenizerMode').innerText = CompressorTokenizer.getMode() === 'bpe' ? 'BPE' : 'stima';
-    $('tokenizerMode').className = CompressorTokenizer.getMode() === 'bpe'
-        ? 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-        : 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20';
+    $('outputCharCount').innerText = useImg ? `${glyphState.pages.length} pag` : `${comp.length} car.`;
+
+    const modeEl = $('tokenizerMode');
+    if (useImg) {
+        modeEl.innerText = 'IMG';
+        modeEl.title = 'Token fatturati come immagine Anthropic: (larghezza × altezza) / 750 per pagina';
+        modeEl.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20';
+    } else {
+        modeEl.innerText = CompressorTokenizer.getMode() === 'bpe' ? 'BPE' : 'stima';
+        modeEl.title = 'Metodo di conteggio token';
+        modeEl.className = CompressorTokenizer.getMode() === 'bpe'
+            ? 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+            : 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20';
+    }
 }
 
 function addBadge(container, label, colorClasses) {
@@ -434,7 +555,7 @@ function clearAll() {
 }
 
 function toggleAllModules(enable) {
-    ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom', 'mod_toon', 'mod_prose'].forEach(id => {
+    ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom', 'mod_toon', 'mod_prose', 'mod_omniglyph'].forEach(id => {
         const el = $(id);
         if (el) el.checked = enable;
     });
@@ -467,6 +588,10 @@ async function pasteFromClipboard() {
 }
 
 function copyOutput() {
+    if (glyphState.active && outputView === 'image') {
+        copyGlyphImage();
+        return;
+    }
     const outputText = $('compressedOutput').value;
     if (!outputText) return;
 
@@ -478,6 +603,21 @@ function copyOutput() {
         });
     } else {
         fallbackCopyText(outputText);
+    }
+}
+
+async function copyGlyphImage() {
+    const page = glyphState.pages[glyphState.current];
+    if (!page) return;
+    try {
+        if (!navigator.clipboard || !window.ClipboardItem || !window.isSecureContext) {
+            throw new Error('clipboard image non supportato');
+        }
+        const blob = await OmniGlyph.toBlob(page);
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        showToast(`Pagina ${glyphState.current + 1} copiata come PNG!`);
+    } catch (err) {
+        showToast('Copia immagine non supportata qui: usa Scarica PNG', true);
     }
 }
 
@@ -546,7 +686,7 @@ function saveState() {
     document.querySelectorAll('input[type=checkbox]').forEach(cb => {
         state[cb.id] = cb.checked;
     });
-    const inputs = ['caveman_lang', 'toon_delimiter', 'customWords', 'costModel', 'costRequests'];
+    const inputs = ['caveman_lang', 'toon_delimiter', 'omniglyph_density', 'customWords', 'costModel', 'costRequests'];
     inputs.forEach(id => {
         const el = $(id);
         if (el) state[id] = el.value;
@@ -570,7 +710,7 @@ function restoreState() {
         document.querySelectorAll('input[type=checkbox]').forEach(cb => {
             if (state[cb.id] !== undefined) cb.checked = state[cb.id];
         });
-        ['caveman_lang', 'customWords', 'costModel', 'costRequests'].forEach(id => {
+        ['caveman_lang', 'omniglyph_density', 'customWords', 'costModel', 'costRequests'].forEach(id => {
             const el = $(id);
             if (el && state[id] !== undefined) el.value = state[id];
         });

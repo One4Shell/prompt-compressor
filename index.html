@@ -335,6 +335,34 @@
                 </div>
             </div>
 
+            <!-- 7. OMNIGLYPH MODULE -->
+            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between">
+                    <label for="mod_omniglyph" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
+                        <input type="checkbox" id="mod_omniglyph" onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <span class="flex items-center gap-2 truncate">
+                            <i class="fa-solid fa-image text-fuchsia-400 text-xs w-4 text-center"></i>
+                            <span class="sidebar-text">OmniGlyph</span>
+                        </span>
+                    </label>
+                    <span class="sidebar-text text-[9px] font-mono uppercase bg-fuchsia-500/10 text-fuchsia-400 px-1.5 py-0.5 rounded border border-fuchsia-500/20 shrink-0">PNG</span>
+                </div>
+
+                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-fuchsia-500/20">
+                    <p class="text-[10px] text-slate-400 mb-1">Trasforma l'output compresso in pagine PNG che i modelli vision leggono al posto del testo. I token immagine sono fatturati per dimensione ((w×h)/750), non per caratteri. Con OmniGlyph attivo i blocchi JSON vengono minificati automaticamente nell'immagine e il layout massimizza il testo per pagina: l'output testuale non cambia.</p>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[10px] text-slate-400">Densità testo:</span>
+                        <select id="omniglyph_density" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none">
+                            <option value="auto" selected>Auto (max testo su 1 pag)</option>
+                            <option value="readable">Leggibile (16px)</option>
+                            <option value="compact">Compatto (13px)</option>
+                            <option value="dense">Denso (10px)</option>
+                        </select>
+                    </div>
+                    <p class="text-[9px] text-slate-500">Solo route Anthropic diretta: il risparmio si applica ai modelli che fatturano le immagini per area, non per caratteri.</p>
+                </div>
+            </div>
+
             <!-- Custom Stopwords Panel -->
             <div class="sidebar-content pt-2 border-t border-darkborder">
                 <button onclick="toggleCustomRules()" class="w-full flex items-center justify-between text-xs font-semibold text-slate-300 hover:text-white py-1">
@@ -507,8 +535,12 @@
                         <div class="flex items-center gap-2 sm:gap-3">
                             <label class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
                                 <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                                Output Compresso (Diff)
+                                <span id="outputLabel">Output Compresso (Diff)</span>
                             </label>
+                            <div id="outputViewToggle" class="hidden flex items-center bg-slate-900 border border-slate-700 rounded-lg overflow-hidden shrink-0">
+                                <button id="viewBtnText" onclick="switchOutputView('text')" class="px-2 py-0.5 text-[10px] font-semibold rounded-l-lg bg-brand-600 text-white border-r border-slate-700">Testo</button>
+                                <button id="viewBtnImage" onclick="switchOutputView('image')" class="px-2 py-0.5 text-[10px] font-semibold rounded-r-lg bg-slate-800 text-slate-400 hover:bg-slate-700">Immagine</button>
+                            </div>
                         </div>
                         <div class="flex items-center gap-2">
                             <span id="outputCharCount" class="text-[11px] font-mono text-brand-400">0 car.</span>
@@ -522,8 +554,30 @@
                     <!-- Hidden Textarea for copying compressed plain text -->
                     <textarea id="compressedOutput" readonly class="hidden"></textarea>
 
-                    <!-- HTML Diff Viewer (Always visible) -->
+                    <!-- HTML Diff Viewer -->
                     <div id="diffViewer" class="w-full flex-1 bg-slate-900/90 text-slate-200 font-mono text-xs sm:text-sm p-3 rounded-lg border border-slate-800 overflow-y-auto leading-relaxed whitespace-pre-wrap min-h-0"></div>
+
+                    <!-- OmniGlyph Image Viewer -->
+                    <div id="glyphViewer" class="hidden w-full flex-1 bg-slate-900/90 rounded-lg border border-slate-800 flex-col min-h-0">
+                        <div class="flex items-center justify-between px-3 py-1.5 border-b border-slate-800 shrink-0 gap-2">
+                            <div class="flex items-center gap-1.5">
+                                <button id="glyphPrev" onclick="glyphNav(-1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[10px] flex items-center justify-center transition" title="Pagina precedente">
+                                    <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <span id="glyphPageInfo" class="text-[10px] font-mono text-slate-400 whitespace-nowrap">pag 1/1</span>
+                                <button id="glyphNext" onclick="glyphNav(1)" class="w-6 h-6 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[10px] flex items-center justify-center transition" title="Pagina successiva">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <button onclick="downloadGlyph()" class="text-[10px] font-semibold text-brand-400 hover:text-brand-300 border border-brand-500/30 bg-brand-500/10 rounded px-2 py-1 transition flex items-center gap-1.5" title="Scarica la pagina corrente come PNG">
+                                <i class="fa-solid fa-download text-[10px]"></i>
+                                <span class="hidden sm:inline">Scarica PNG</span>
+                            </button>
+                        </div>
+                        <div class="flex-1 overflow-auto flex items-start justify-center p-3 min-h-0">
+                            <img id="glyphImage" class="max-w-full h-auto bg-white rounded shadow" alt="Anteprima OmniGlyph">
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -542,6 +596,7 @@
     <script src="js/modules.js"></script>
     <script src="js/toon.js"></script>
     <script src="js/diff.js"></script>
+    <script src="js/omniglyph.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

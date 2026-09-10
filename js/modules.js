@@ -116,6 +116,83 @@ window.CompressorModules = (function () {
         return result;
     }
 
+    // Scansione di un candidato JSON a partire da "start": traccia lo stato
+    // stringa (con escape) e la profondita' {/[ ; ritorna l'indice dopo la
+    // chiusura bilanciata, oppure -1 se non si chiude.
+    function scanJsonCandidate(text, start) {
+        let depth = 0;
+        let inString = false;
+        for (let i = start; i < text.length; i++) {
+            const ch = text[i];
+            if (inString) {
+                if (ch === '\\') i++;
+                else if (ch === '"') inString = false;
+                continue;
+            }
+            if (ch === '"') inString = true;
+            else if (ch === '{' || ch === '[') depth++;
+            else if (ch === '}' || ch === ']') {
+                depth--;
+                if (depth === 0) return i + 1;
+                if (depth < 0) return -1;
+            }
+        }
+        return -1;
+    }
+
+    // Trova TUTTI i blocchi JSON embedded nel testo misto (prosa + JSON).
+    // Un blocco e' valido solo se: inizia a inizio riga (solo whitespace
+    // prima sulla riga), le parentesi si bilanciano e JSON.parse ha successo.
+    // Le regioni gia' dentro fence ``` sono saltate.
+    function findJsonBlocks(text) {
+        const blocks = [];
+        const n = text.length;
+        let i = 0;
+
+        while (i < n) {
+            const ch = text[i];
+
+            if (ch === '`' && text.startsWith('```', i)) {
+                const close = text.indexOf('```', i + 3);
+                i = close === -1 ? n : close + 3;
+                continue;
+            }
+
+            if (ch === '{' || ch === '[') {
+                const lineStart = text.lastIndexOf('\n', i - 1) + 1;
+                if (text.slice(lineStart, i).trim() === '') {
+                    const end = scanJsonCandidate(text, i);
+                    if (end !== -1) {
+                        try {
+                            JSON.parse(text.slice(i, end));
+                            blocks.push({ start: i, end });
+                            i = end;
+                            continue;
+                        } catch (e) { /* non e' JSON valido: continua la scansione */ }
+                    }
+                }
+            }
+            i++;
+        }
+        return blocks;
+    }
+
+    // Sostituisce i blocchi JSON individuati da findJsonBlocks applicando
+    // "process" a ciascuno; i blocchi per cui process ritorna null/undefined
+    // restano intatti. La sostituzione avviene in ordine inverso per
+    // preservare gli indici dei blocchi precedenti.
+    function replaceJsonBlocks(text, process) {
+        const blocks = findJsonBlocks(text);
+        for (let b = blocks.length - 1; b >= 0; b--) {
+            const block = blocks[b];
+            const replacement = process(text.slice(block.start, block.end));
+            if (replacement !== null && replacement !== undefined) {
+                text = text.slice(0, block.start) + replacement + text.slice(block.end);
+            }
+        }
+        return text;
+    }
+
     function headroom(text, o) {
         const processJsonContent = (jsonStr) => {
             try {
@@ -167,13 +244,10 @@ window.CompressorModules = (function () {
             return match;
         });
 
-        const bareJson = text.trim();
-        if (bareJson.startsWith('[') || bareJson.startsWith('{')) {
-            const processed = processJsonContent(bareJson);
-            if (processed) {
-                text = processed.content;
-            }
-        }
+        text = replaceJsonBlocks(text, (jsonStr) => {
+            const processed = processJsonContent(jsonStr);
+            return processed ? processed.content : null;
+        });
 
         if (o.hashes) {
             text = text.replace(/\b([a-f0-9]{32,64})\b/gi, (match) => match.substring(0, 8) + '...' + match.substring(match.length - 6));
@@ -208,13 +282,10 @@ window.CompressorModules = (function () {
             return match;
         });
 
-        const bareJson = text.trim();
-        if (bareJson.startsWith('[') || bareJson.startsWith('{')) {
-            const processed = encodeJson(bareJson);
-            if (processed !== null) {
-                text = '```toon\n' + processed + '\n```';
-            }
-        }
+        text = replaceJsonBlocks(text, (jsonStr) => {
+            const encoded = encodeJson(jsonStr);
+            return encoded !== null ? '```toon\n' + encoded + '\n```' : null;
+        });
 
         return text;
     }
@@ -290,5 +361,5 @@ window.CompressorModules = (function () {
         return cur;
     }
 
-    return { ORDER, run, runAll };
+    return { ORDER, run, runAll, findJsonBlocks };
 })();
