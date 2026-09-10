@@ -103,7 +103,55 @@ Ti sarei davvero molto grato se potessi fornirmi anche degli esempi pratici di u
     "mfa_enabled": false
   }
 ]
-\`\`\``
+\`\`\``,
+
+    toon_mixed: `Riepilogo meteo per il lancio di domani. Ecco i dati strutturati:
+
+\`\`\`json
+{
+  "location": {
+    "city": "Berlin",
+    "country": "DE",
+    "units": "metric"
+  },
+  "alerts": ["frost", "wind"],
+  "forecast": [
+    {
+      "day": "Mon",
+      "temp": { "min": -2, "max": 4 },
+      "condition": "snow",
+      "rainChance": 80
+    },
+    {
+      "day": "Tue",
+      "temp": { "min": 1, "max": 7 },
+      "condition": "cloudy",
+      "rainChance": 20
+    },
+    {
+      "day": "Wed",
+      "temp": { "min": 3, "max": 11 },
+      "condition": "sunny",
+      "rainChance": 5
+    }
+  ]
+}
+\`\`\`
+
+Analizza il meteo per i prossimi giorni.`,
+
+    toon_keyed: `Ecco la configurazione degli ambienti di deploy:
+
+\`\`\`json
+{
+  "environments": {
+    "production": { "region": "eu-central-1", "replicas": 6, "debug": false },
+    "staging": { "region": "eu-central-1", "replicas": 2, "debug": true }
+  }
+}
+\`\`\`
+
+Riassumi i settings di ogni ambiente.`
 };
 
 const COST_MODELS = {
@@ -121,6 +169,7 @@ const AGGRESSION = {
         mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true,
         mod_rtk: true, rtk_ansi: true, rtk_timestamps: true, rtk_dedupe: true, rtk_progress: true, rtk_counters: false, rtk_stacktrace: false,
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: false, headroom_base64: false, headroom_stripkeys: false,
+        mod_toon: true, toon_delimiter: ',',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: false, caveman_intensifiers: false,
         mod_prose: false
     },
@@ -128,6 +177,7 @@ const AGGRESSION = {
         mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true,
         mod_rtk: true, rtk_ansi: true, rtk_timestamps: true, rtk_dedupe: true, rtk_progress: true, rtk_counters: true, rtk_stacktrace: false,
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: true, headroom_base64: true, headroom_stripkeys: false,
+        mod_toon: true, toon_delimiter: ',',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: false, caveman_intensifiers: true,
         mod_prose: false
     },
@@ -135,6 +185,7 @@ const AGGRESSION = {
         mod_lite: true, lite_trim: true, lite_empty_lines: true, lite_markdown: true,
         mod_rtk: true, rtk_ansi: true, rtk_timestamps: true, rtk_dedupe: true, rtk_progress: true, rtk_counters: true, rtk_stacktrace: true,
         mod_headroom: true, headroom_minify: true, headroom_csv: true, headroom_hashes: true, headroom_base64: true, headroom_stripkeys: true,
+        mod_toon: true, toon_delimiter: '\t',
         mod_caveman: true, caveman_fillers: true, caveman_articles: true, caveman_preps: true, caveman_telegraph: true, caveman_intensifiers: true,
         mod_prose: true
     }
@@ -144,6 +195,7 @@ const STAGE_INFO = {
     lite: { label: 'Lite Clean', cls: 'bg-sky-500/10 text-sky-400 border-sky-500/20', bar: 'bg-sky-500' },
     rtk: { label: 'RTK Filter', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20', bar: 'bg-emerald-500' },
     headroom: { label: 'Headroom', cls: 'bg-purple-500/10 text-purple-400 border-purple-500/20', bar: 'bg-purple-500' },
+    toon: { label: 'TOON', cls: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20', bar: 'bg-cyan-500' },
     caveman: { label: 'Caveman', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20', bar: 'bg-amber-500' },
     prose: { label: 'Prose Compress', cls: 'bg-rose-500/10 text-rose-400 border-rose-500/20', bar: 'bg-rose-500' },
     custom: { label: 'Parole/Regex', cls: 'bg-slate-500/10 text-slate-400 border-slate-500/20', bar: 'bg-slate-500' }
@@ -183,6 +235,10 @@ function readOptions() {
             base64: $('headroom_base64').checked,
             stripKeys: $('headroom_stripkeys').checked
         },
+        toon: {
+            on: $('mod_toon').checked,
+            delimiter: $('toon_delimiter').value
+        },
         caveman: {
             on: $('mod_caveman').checked,
             lang: $('caveman_lang').value,
@@ -206,7 +262,7 @@ function processPrompt() {
     activeBadgesContainer.innerHTML = '';
     let activeCount = 0;
 
-    const order = ['lite', 'rtk', 'headroom', 'caveman', 'prose'];
+    const order = ['lite', 'rtk', 'headroom', 'caveman', 'prose', 'toon'];
     for (const name of order) {
         if (opts[name] && opts[name].on) {
             addBadge(activeBadgesContainer, STAGE_INFO[name].label, STAGE_INFO[name].cls);
@@ -324,7 +380,12 @@ function applyAggression(level) {
     const profile = AGGRESSION[level] || AGGRESSION.medium;
     for (const id of Object.keys(profile)) {
         const el = $(id);
-        if (el) el.checked = profile[id];
+        if (!el) continue;
+        if (id === 'toon_delimiter') {
+            el.value = profile[id];
+        } else if (el.type === 'checkbox') {
+            el.checked = profile[id];
+        }
     }
     ['light', 'medium', 'extreme'].forEach(l => {
         const btn = $(`agg_${l}`);
@@ -373,7 +434,7 @@ function clearAll() {
 }
 
 function toggleAllModules(enable) {
-    ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom', 'mod_prose'].forEach(id => {
+    ['mod_lite', 'mod_caveman', 'mod_rtk', 'mod_headroom', 'mod_toon', 'mod_prose'].forEach(id => {
         const el = $(id);
         if (el) el.checked = enable;
     });
@@ -485,7 +546,7 @@ function saveState() {
     document.querySelectorAll('input[type=checkbox]').forEach(cb => {
         state[cb.id] = cb.checked;
     });
-    const inputs = ['caveman_lang', 'customWords', 'costModel', 'costRequests'];
+    const inputs = ['caveman_lang', 'toon_delimiter', 'customWords', 'costModel', 'costRequests'];
     inputs.forEach(id => {
         const el = $(id);
         if (el) state[id] = el.value;

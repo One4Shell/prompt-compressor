@@ -1,5 +1,5 @@
 window.CompressorModules = (function () {
-    const ORDER = ['lite', 'rtk', 'headroom', 'caveman', 'prose', 'custom'];
+    const ORDER = ['lite', 'rtk', 'headroom', 'caveman', 'prose', 'custom', 'toon'];
 
     function lite(text, o) {
         if (o.trim) {
@@ -189,6 +189,36 @@ window.CompressorModules = (function () {
         return text;
     }
 
+    function toon(text, o) {
+        const delimiter = o.delimiter === '\t' || o.delimiter === '|' ? o.delimiter : ',';
+        const encodeJson = (jsonStr) => {
+            try {
+                const parsed = JSON.parse(jsonStr.trim());
+                return window.ToonEncoder.encode(parsed, { delimiter });
+            } catch (e) {
+                return null;
+            }
+        };
+
+        text = text.replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, (match, code) => {
+            const processed = encodeJson(code);
+            if (processed !== null) {
+                return '```toon\n' + processed + '\n```';
+            }
+            return match;
+        });
+
+        const bareJson = text.trim();
+        if (bareJson.startsWith('[') || bareJson.startsWith('{')) {
+            const processed = encodeJson(bareJson);
+            if (processed !== null) {
+                text = '```toon\n' + processed + '\n```';
+            }
+        }
+
+        return text;
+    }
+
     function caveman(text, o) {
         const dict = window.CompressorDicts.CAVEMAN[o.lang] || window.CompressorDicts.CAVEMAN.it;
 
@@ -241,6 +271,7 @@ window.CompressorModules = (function () {
             case 'lite': return lite(text, o);
             case 'rtk': return rtk(text, o);
             case 'headroom': return headroom(text, o);
+            case 'toon': return toon(text, o);
             case 'caveman': return caveman(text, o);
             case 'prose': return prose(text, o);
             case 'custom': return customWords(text, o.words || []);

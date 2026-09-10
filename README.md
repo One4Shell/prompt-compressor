@@ -6,7 +6,7 @@ L'elaborazione è **100% client-side**: il testo non lascia mai il browser.
 
 ## Caratteristiche
 
-- Compressione tramite 5 moduli indipendenti, attivabili/disattivabili singolarmente o in blocco
+- Compressione tramite 6 moduli indipendenti, attivabili/disattivabili singolarmente o in blocco
 - **Contatore token reale BPE** (`cl100k_base` via `gpt-tokenizer`) con fallback automatico all'euristica `char/3.8` se offline
 - **Slider di aggressività** (Leggera / Media / Estrema) che applica profili di regole predefiniti
 - **Analisi per modulo**: quanti token risparmia ogni singolo modulo
@@ -69,6 +69,16 @@ Compressione di dati strutturati.
 | Tronca Hash hex lunghi | Riduce hash hex 32-64 char a `primi 8...ultimi 6` |
 | Tronca Base64/Token lunghi | Riduce stringhe base64/JWT ≥ 28 char a `primi 12...ultimi 6` |
 
+### TOON
+
+Conversione di dati JSON in **TOON (Token-Oriented Object Notation)** — una codifica compatta del modello dati JSON, studiata per minimizzare i token mantenendo la struttura esplicita. Converte il JSON (dentro o fuori i code fence) in blocchi ```toon```.
+
+| Opzione | Effetto |
+|---|---|
+| Delimiter | Virgola (default), Tab (più compatto, consigliato in profilo Estremo) o Pipe |
+
+L'encoder implementa le forme dello **spec TOON v4.1**: inline (array di primitive), tabular (array di oggetti uniformi, con **nested field group**), keyed tabular (oggetti di oggetti uniformi) e list form (array misti/non-uniformi). Il quoting delle stringhe è minimale (solo quando necessario), i numeri sono emessi in forma canonica. L'output sostituisce il JSON originale ed è avvolto in un fence ```toon```.
+
 ### Prose Compress
 
 Rimozione di cliché e frasi ponte a bassa informazione ("In conclusione, va notato che...", "Spero di esserti stato d'aiuto", ecc.). Default disattivo, consigliato in profilo Estremo.
@@ -83,7 +93,7 @@ Il profilo di aggressione imposta un sottoinsieme delle opzioni sopra:
 
 - **Leggera**: comportamento v2 (pulizie sicure)
 - **Media**: aggiunge intensificatori, tronca hash/base64, collassa contatori (default)
-- **Estrema**: attiva tutto, incluso Prose Compress, stack-trace, scarto chiavi JSON e telegrafico
+- **Estrema**: attiva tutto, incluso Prose Compress, stack-trace, scarto chiavi JSON, telegrafico e **delimiter TOON a Tab**
 
 Dopo aver scelto un profilo puoi comunque rifinire le singole opzioni a mano.
 
@@ -105,6 +115,8 @@ Il badge accanto alle metriche indica il metodo di conteggio: **BPE** (reale, vi
 - **Output Shell Logs** (RTK)
 - **Array JSON Strutturato** (Headroom)
 - **JSON con Token/Base64** (Headroom++)
+- **JSON Annidato** (TOON)
+- **Mappa JSON** (TOON Keyed)
 
 ## Come usare
 
@@ -150,6 +162,7 @@ prompt-compressor/
     ├── dicts.js      # Dizionari Caveman/Prose (IT/EN)
     ├── tokenizer.js  # BPE via CDN + fallback euristico
     ├── modules.js    # Pipeline dei moduli di compressione
+    ├── toon.js       # Encoder JSON→TOON (spec TOON v4.1)
     ├── diff.js       # Diff Myers O(ND) + word diff
     └── app.js        # Orchestrazione, metriche, costi, stato
 ```

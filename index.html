@@ -290,7 +290,34 @@
                 </div>
             </div>
 
-            <!-- 5. PROSE COMPRESS MODULE -->
+            <!-- 5. TOON MODULE -->
+            <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
+                <div class="flex items-center justify-between">
+                    <label for="mod_toon" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
+                        <input type="checkbox" id="mod_toon" checked onchange="onOptionChange()" class="w-4 h-4 rounded text-brand-600 bg-slate-800 border-slate-600 focus:ring-brand-500 cursor-pointer shrink-0">
+                        <span class="flex items-center gap-2 truncate">
+                            <i class="fa-solid fa-object-group text-cyan-400 text-xs w-4 text-center"></i>
+                            <span class="sidebar-text">TOON</span>
+                        </span>
+                    </label>
+                    <span class="sidebar-text text-[9px] font-mono uppercase bg-cyan-500/10 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-500/20 shrink-0">JSON→TOON</span>
+                </div>
+
+                <div class="sidebar-content mt-2.5 pl-6 space-y-2 text-[11px] border-l-2 border-cyan-500/20">
+                    <p class="text-[10px] text-slate-400 mb-1">Token-Oriented Object Notation: serializza JSON in forma compatta, con strutture tabulari per array di oggetti uniformi.</p>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[10px] text-slate-400">Delimiter:</span>
+                        <select id="toon_delimiter" onchange="onOptionChange()" class="bg-slate-900 text-slate-200 text-[10px] rounded px-1.5 py-0.5 border border-slate-700 outline-none">
+                            <option value="," selected>Virgola</option>
+                            <option value="&#9;">Tab (più compatto)</option>
+                            <option value="|">Pipe</option>
+                        </select>
+                    </div>
+                    <p class="text-[9px] text-slate-500">Converte JSON (anche fuori dai fence) in blocchi <span class="font-mono">```toon</span>.</p>
+                </div>
+            </div>
+
+            <!-- 6. PROSE COMPRESS MODULE -->
             <div class="bg-darkcard/80 rounded-xl p-3 border border-darkborder transition hover:border-slate-700/80 group">
                 <div class="flex items-center justify-between">
                     <label for="mod_prose" class="flex items-center gap-2.5 font-semibold text-xs text-slate-200 cursor-pointer w-full">
@@ -351,6 +378,8 @@
                         <option value="rtk_logs">Output Shell Logs (RTK)</option>
                         <option value="headroom_json">Array JSON Strutturato (Headroom)</option>
                         <option value="headroom_keys">JSON con Token/Base64 (Headroom++)</option>
+                        <option value="toon_mixed">JSON Annidato (TOON)</option>
+                        <option value="toon_keyed">Mappa JSON (TOON Keyed)</option>
                     </select>
                 </div>
 
@@ -511,6 +540,7 @@
     <script src="js/dicts.js"></script>
     <script src="js/tokenizer.js"></script>
     <script src="js/modules.js"></script>
+    <script src="js/toon.js"></script>
     <script src="js/diff.js"></script>
     <script src="js/app.js"></script>
 </body>
