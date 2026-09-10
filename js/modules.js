@@ -484,8 +484,9 @@ window.CompressorModules = (function () {
         for (const name of ORDER) {
             const mod = opts[name];
             if (!mod || !mod.on) continue;
+            const prev = cur;
             cur = run(name, cur, mod);
-            if (onStage) onStage(name, cur);
+            if (onStage) onStage(name, cur, prev);
         }
         return cur;
     }

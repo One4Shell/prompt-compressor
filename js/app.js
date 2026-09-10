@@ -249,15 +249,30 @@ function $(id) { return document.getElementById(id); }
 
 const FLAT_SELECT_IDS = ['caveman_lang', 'toon_delimiter', 'omniglyph_density'];
 
+const CHECKBOXES = Array.from(document.querySelectorAll('input[type=checkbox]')).filter(cb => cb.id);
+
+const MODULE_CONTROLS = (() => {
+    const map = {};
+    for (const name of MODULE_IDS) {
+        const toggle = $(`mod_${name}`);
+        if (!toggle) continue;
+        const card = toggle.closest('.module-card');
+        map[name] = {
+            toggle,
+            card,
+            controls: card ? Array.from(card.querySelectorAll('.sidebar-content input, .sidebar-content select')) : []
+        };
+    }
+    return map;
+})();
+
 function readFlatState() {
     const flat = {};
-    document.querySelectorAll('input[type=checkbox]').forEach(cb => {
-        if (cb.id) flat[cb.id] = cb.checked;
-    });
-    FLAT_SELECT_IDS.forEach(id => {
+    for (const cb of CHECKBOXES) flat[cb.id] = cb.checked;
+    for (const id of FLAT_SELECT_IDS) {
         const el = $(id);
         if (el) flat[id] = el.value;
-    });
+    }
     return flat;
 }
 
@@ -327,50 +342,28 @@ function readOptions() {
 
 function syncModuleStates() {
     for (const name of MODULE_IDS) {
-        const toggle = $(`mod_${name}`);
-        if (!toggle) continue;
-        const card = toggle.closest('.module-card');
-        if (!card) continue;
+        const entry = MODULE_CONTROLS[name];
+        if (!entry) continue;
+        const { toggle, card, controls } = entry;
         const autoOff = name === 'toon' && toonAutoDisabled;
         const on = toggle.checked && !autoOff;
-        card.classList.toggle('module-off', !on);
-        card.querySelectorAll('.sidebar-content input, .sidebar-content select').forEach(el => {
-            el.disabled = !on;
-        });
+        if (card) card.classList.toggle('module-off', !on);
+        const disabled = !on;
+        for (const el of controls) {
+            if (el.disabled !== disabled) el.disabled = disabled;
+        }
         if (name === 'toon') {
-            toggle.disabled = autoOff;
-            toggle.title = autoOff ? 'TOON disattivato: aumenterebbe i token per questo input' : '';
+            const title = autoOff ? 'TOON disattivato: aumenterebbe i token per questo input' : '';
+            if (toggle.disabled !== autoOff) toggle.disabled = autoOff;
+            if (toggle.title !== title) toggle.title = title;
         }
     }
-}
-
-function toonWorsensTokens(rawText, baseOpts) {
-    if (!$('mod_toon').checked) return false;
-    const opts = Object.assign({}, baseOpts, {
-        toon: Object.assign({}, baseOpts.toon, { on: true })
-    });
-    let before = rawText;
-    let after = null;
-    let seen = false;
-    CompressorModules.runAll(rawText, opts, (name, text) => {
-        if (name === 'toon') {
-            seen = true;
-            after = text;
-        } else {
-            before = text;
-        }
-    });
-    if (!seen || after === null) return false;
-    return CompressorTokenizer.count(after) > CompressorTokenizer.count(before);
 }
 
 function processPrompt() {
     const t0 = performance.now();
     const rawText = $('rawInput').value;
-    const probeOpts = readOptions();
-    toonAutoDisabled = toonWorsensTokens(rawText, probeOpts);
-    syncModuleStates();
-    const opts = readOptions();
+    const opts = readOptions({ toonDisabled: false });
 
     const activeBadgesContainer = $('activeBadges');
     activeBadgesContainer.innerHTML = '';
@@ -388,18 +381,37 @@ function processPrompt() {
         activeCount++;
     }
 
-    const text = CompressorModules.runAll(rawText, opts, () => {});
+    let beforeToon = null;
+    let toonOut = null;
+    const text = CompressorModules.runAll(rawText, opts, (name, out, before) => {
+        if (name === 'toon') {
+            beforeToon = before;
+            toonOut = out;
+        }
+    });
+
+    let textFinal = text;
+    let glyphOpt = opts.omniglyph;
+    toonAutoDisabled = false;
+    if (toonOut !== null && beforeToon !== null
+        && CompressorTokenizer.count(toonOut) > CompressorTokenizer.count(beforeToon)) {
+        const optsFinal = readOptions({ toonDisabled: true });
+        textFinal = CompressorModules.runAll(rawText, optsFinal, () => {});
+        toonAutoDisabled = true;
+        glyphOpt = optsFinal.omniglyph;
+    }
+    syncModuleStates();
 
     if (activeCount === 0) {
         activeBadgesContainer.innerHTML = '<span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700">Nessuno</span>';
     }
 
-    $('compressedOutput').value = text;
-    updateMetrics(rawText, text);
-    CompressorDiff.render(rawText, text);
+    $('compressedOutput').value = textFinal;
+    updateMetrics(rawText, textFinal);
+    scheduleDiff(rawText, textFinal);
 
-    if (opts.omniglyph.on) {
-        renderGlyph(text, opts.omniglyph.density);
+    if (glyphOpt.on) {
+        renderGlyph(textFinal, glyphOpt.density);
     } else {
         disableGlyph();
     }
@@ -507,6 +519,32 @@ async function downloadGlyph() {
 function scheduleProcess() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(processPrompt, 150);
+}
+
+let diffTimer = null;
+let diffPending = null;
+
+function scheduleDiff(raw, comp) {
+    diffPending = { raw, comp };
+    clearTimeout(diffTimer);
+    diffTimer = setTimeout(flushDiff, 250);
+}
+
+function flushDiff() {
+    clearTimeout(diffTimer);
+    if (!diffPending) return;
+    const { raw, comp } = diffPending;
+    diffPending = null;
+    if (isMobileView() && !$('outputPanel').classList.contains('flex')) return;
+    CompressorDiff.render(raw, comp);
+}
+
+function flushDiffNow() {
+    clearTimeout(diffTimer);
+    if (!diffPending) return;
+    const { raw, comp } = diffPending;
+    diffPending = null;
+    CompressorDiff.render(raw, comp);
 }
 
 let saveTimer = null;
@@ -640,22 +678,27 @@ function updateMetrics(raw, comp) {
     $('savedChars').innerText = savedChars.toLocaleString();
     $('savedCharsPct').innerText = `-${charPct}%`;
     $('savedCost').innerText = `$${savedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
-    $('inputCharCount').innerText = `${raw.length} car.`;
     updateInputCount(raw);
     $('outputCharCount').innerText = useImg ? `${glyphState.pages.length} pag` : `${comp.length} car.`;
 
     const modeEl = $('tokenizerMode');
+    let text, title, cls;
     if (useImg) {
-        modeEl.innerText = 'IMG';
-        modeEl.title = 'Token fatturati come immagine Anthropic: (larghezza × altezza) / 750 per pagina';
-        modeEl.className = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20';
+        text = 'IMG';
+        title = 'Token fatturati come immagine Anthropic: (larghezza × altezza) / 750 per pagina';
+        cls = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20';
+    } else if (CompressorTokenizer.getMode() === 'bpe') {
+        text = 'BPE';
+        title = 'Metodo di conteggio token';
+        cls = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
     } else {
-        modeEl.innerText = CompressorTokenizer.getMode() === 'bpe' ? 'BPE' : 'stima';
-        modeEl.title = 'Metodo di conteggio token';
-        modeEl.className = CompressorTokenizer.getMode() === 'bpe'
-            ? 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-            : 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20';
+        text = 'stima';
+        title = 'Metodo di conteggio token';
+        cls = 'text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-400 border border-slate-500/20';
     }
+    if (modeEl.innerText !== text) modeEl.innerText = text;
+    if (modeEl.title !== title) modeEl.title = title;
+    if (modeEl.className !== cls) modeEl.className = cls;
 }
 
 function addBadge(container, label, colorClasses) {
@@ -1052,6 +1095,7 @@ function switchMobileTab(tab) {
         outputPanel.classList.add('flex');
         btnInput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400';
         btnOutput.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg bg-brand-600 text-white';
+        flushDiffNow();
     }
 }
 
@@ -1080,16 +1124,24 @@ function showToast(message, isError = false) {
 
 function saveState() {
     const state = { sidebar: isSidebarCollapsed, aggression: currentAggression };
-    document.querySelectorAll('input[type=checkbox]').forEach(cb => {
-        state[cb.id] = cb.checked;
-    });
+    for (const cb of CHECKBOXES) state[cb.id] = cb.checked;
     const inputs = ['caveman_lang', 'toon_delimiter', 'omniglyph_density', 'customWords', 'costModel', 'costRequests'];
     inputs.forEach(id => {
         const el = $(id);
         if (el) state[id] = el.value;
     });
+    try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    } catch (e) {}
+}
+
+function persistRawInput() {
     const rawInput = $('rawInput');
-    if (rawInput && rawInput.value.length <= 200000) state.rawInput = rawInput.value;
+    if (!rawInput || !rawInput.value || rawInput.value.length > 200000) return;
+    let state = null;
+    try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch (e) { state = null; }
+    state = state || {};
+    state.rawInput = rawInput.value;
     try {
         localStorage.setItem(STORE_KEY, JSON.stringify(state));
     } catch (e) {}
@@ -1108,9 +1160,9 @@ function restoreState() {
         if (!isAuto && state.aggression && AGGRESSION[state.aggression]) currentAggression = state.aggression;
         applyAggression(currentAggression);
         if (isAuto) clearAggressionHighlight();
-        document.querySelectorAll('input[type=checkbox]').forEach(cb => {
+        for (const cb of CHECKBOXES) {
             if (state[cb.id] !== undefined) cb.checked = state[cb.id];
-        });
+        }
         ['caveman_lang', 'toon_delimiter', 'omniglyph_density', 'customWords', 'costModel', 'costRequests'].forEach(id => {
             const el = $(id);
             if (el && state[id] !== undefined) el.value = state[id];
@@ -1125,18 +1177,18 @@ function restoreState() {
     } else {
         applyAggression('medium');
     }
+    return state;
 }
 
 window.addEventListener('DOMContentLoaded', () => {
     syncPresetLocation();
-    restoreState();
+    const state = restoreState();
     initDragAndDrop();
-    const savedInput = (function () {
-        try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { return null; }
-    })()?.rawInput;
+    const rawInput = $('rawInput');
+    const savedInput = state?.rawInput;
     $('presetSelect').value = '';
     if (savedInput) {
-        $('rawInput').value = savedInput;
+        rawInput.value = savedInput;
         updateInputCount(savedInput);
         processPrompt();
     } else {
@@ -1145,6 +1197,12 @@ window.addEventListener('DOMContentLoaded', () => {
     CompressorTokenizer.init().then(() => {
         processPrompt();
     });
+
+    rawInput.addEventListener('blur', persistRawInput);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') persistRawInput();
+    });
+    window.addEventListener('pagehide', persistRawInput);
 });
 
 document.addEventListener('keydown', e => {

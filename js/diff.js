@@ -1,6 +1,7 @@
 window.CompressorDiff = (function () {
     const MAX_LINE_CELLS = 3000000;
     const MAX_WORD_TOKENS = 600;
+    const MAX_TRACE_BYTES = 64 * 1024 * 1024;
 
     function escapeHtml(text) {
         return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -21,6 +22,7 @@ window.CompressorDiff = (function () {
         for (let d = 0; d <= max; d++) {
             if (cap && d > cap) return null;
             trace.push(v.slice());
+            if (trace.length * v.length * 4 > MAX_TRACE_BYTES) return null;
             for (let k = -d; k <= d; k += 2) {
                 let x;
                 if (k === -d || (k !== d && v[offset + k - 1] < v[offset + k + 1])) {
