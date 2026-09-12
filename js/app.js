@@ -1114,25 +1114,120 @@ async function copyGlyphImage() {
     }
 }
 
+const LLM_ICONS = {
+    brave: { slug: 'brave', color: 'FB542B' },
+    chatgpt: { src: 'https://api.iconify.design/logos:openai-icon.svg', filter: 'brightness(0) invert(1)' },
+    'google-search': { slug: 'google', color: '4285F4' },
+    perplexity: { slug: 'perplexity', color: '20808A' },
+    claude: { slug: 'anthropic', color: 'D97757' },
+    duck_ai: { slug: 'duckduckgo', color: 'DE5833' },
+};
+
+let llmTargetValue = '';
+
+function llmIconFor(name) {
+    const cfg = LLM_ICONS[String(name || '').trim().toLowerCase()];
+    if (!cfg) return '<i class="fa-solid fa-globe text-[10px] text-slate-400"></i>';
+    const src = cfg.src || `https://cdn.simpleicons.org/${cfg.slug}/${cfg.color}`;
+    const extra = cfg.filter ? ` style="filter:${cfg.filter}"` : '';
+    return `<img src="${src}" alt="" class="w-3.5 h-3.5 shrink-0" loading="lazy"${extra}>`;
+}
+
+function getLLMTargetValue() {
+    return llmTargetValue;
+}
+
+function setLLMTargetValue(name) {
+    llmTargetValue = name || '';
+    const icon = $('llmTargetIcon');
+    const label = $('llmTargetLabel');
+    if (icon) icon.innerHTML = llmIconFor(llmTargetValue);
+    if (label) label.textContent = llmTargetValue || 'Target LLM...';
+}
+
+function toggleLLMMenu(open) {
+    const menu = $('llmTargetMenu');
+    const btn = $('llmTargetBtn');
+    if (!menu || !btn) return;
+    const show = open !== undefined ? open : menu.classList.contains('hidden');
+    menu.classList.toggle('hidden', !show);
+    btn.setAttribute('aria-expanded', String(show));
+}
+
+function closeLLMMenu() {
+    toggleLLMMenu(false);
+}
+
 function initLLMTargets() {
-    const select = $('llmTargetSelect');
+    const wrap = $('llmTargetWrap');
+    const btn = $('llmTargetBtn');
+    const menu = $('llmTargetMenu');
     const sendBtn = $('llmSendBtn');
-    if (!select || !sendBtn) return;
+    if (!wrap || !btn || !menu || !sendBtn) return;
+
+    btn.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleLLMMenu();
+    });
+
+    document.addEventListener('click', e => {
+        if (wrap.classList.contains('hidden')) return;
+        if (!wrap.contains(e.target)) closeLLMMenu();
+    });
+
+    document.addEventListener('keydown', e => {
+        if (wrap.classList.contains('hidden')) return;
+        if (menu.classList.contains('hidden')) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                toggleLLMMenu(true);
+                const first = menu.querySelector('[role="option"]');
+                if (first) first.focus();
+            }
+            return;
+        }
+        const items = [...menu.querySelectorAll('[role="option"]')];
+        const idx = items.indexOf(document.activeElement);
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            items[(idx + 1) % items.length].focus();
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            items[(idx - 1 + items.length) % items.length].focus();
+        } else if (e.key === 'Enter' && idx >= 0) {
+            e.preventDefault();
+            items[idx].click();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closeLLMMenu();
+            btn.focus();
+        }
+    });
+
     LLMTargets.load().then(() => {
         const targets = LLMTargets.getTargets();
         if (!targets.length) return;
-        select.innerHTML = '';
+        menu.innerHTML = '';
         targets.forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t.name;
-            opt.textContent = t.name;
-            select.appendChild(opt);
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'w-full flex items-center gap-2 px-2 py-1.5 text-[10px] text-slate-200 hover:bg-slate-800 text-left transition';
+            item.setAttribute('role', 'option');
+            item.dataset.value = t.name;
+            item.innerHTML = llmIconFor(t.name) + `<span class="truncate">${t.name}</span>`;
+            item.addEventListener('click', e => {
+                e.stopPropagation();
+                setLLMTargetValue(t.name);
+                closeLLMMenu();
+                saveState();
+            });
+            menu.appendChild(item);
         });
         let saved = null;
         try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}').llmTarget; } catch (e) { saved = null; }
-        if (saved && targets.some(t => t.name === saved)) select.value = saved;
-        select.classList.remove('hidden');
-        select.disabled = false;
+        if (saved && targets.some(t => t.name === saved)) setLLMTargetValue(saved);
+        wrap.classList.remove('hidden');
+        btn.disabled = false;
         sendBtn.classList.remove('hidden');
         sendBtn.disabled = false;
         updateLLMSendState();
@@ -1151,15 +1246,14 @@ function sendToLLM() {
         showToast('Nessun output compresso da inviare', true);
         return;
     }
-    const select = $('llmTargetSelect');
-    const url = LLMTargets.buildUrl(select.value, outputText);
+    const url = LLMTargets.buildUrl(getLLMTargetValue(), outputText);
     if (!url) {
         showToast('Target LLM non configurato correttamente', true);
         return;
     }
     saveState();
     window.open(url, '_blank', 'noopener');
-    showToast(`Aperto in nuova scheda: ${select.value}`);
+    showToast(`Aperto in nuova scheda: ${getLLMTargetValue() || 'default'}`);
 }
 
 function fallbackCopyText(text) {
@@ -1231,8 +1325,8 @@ function saveState() {
         const el = $(id);
         if (el) state[id] = el.value;
     });
-    const llmSel = $('llmTargetSelect');
-    if (llmSel) state.llmTarget = llmSel.value;
+    const llmSel = $('llmTargetBtn');
+    if (llmSel) state.llmTarget = getLLMTargetValue();
     try {
         localStorage.setItem(STORE_KEY, JSON.stringify(state));
     } catch (e) {}

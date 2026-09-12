@@ -747,9 +747,14 @@
                         </div>
                         <div class="flex items-center gap-2">
                             <span id="outputCharCount" class="text-[11px] font-mono text-brand-400">0 car.</span>
-                            <select id="llmTargetSelect" class="hidden max-w-[8.5rem] bg-slate-900 text-slate-200 text-[10px] rounded-lg px-1.5 py-1 border border-slate-700 outline-none cursor-pointer truncate" title="Target LLM di destinazione" disabled>
-                                <option value="" disabled>Target LLM...</option>
-                            </select>
+                            <div id="llmTargetWrap" class="hidden relative">
+                                <button id="llmTargetBtn" type="button" class="max-w-[8.5rem] bg-slate-900 text-slate-200 text-[10px] rounded-lg px-1.5 py-1 border border-slate-700 outline-none cursor-pointer flex items-center gap-1.5 hover:border-slate-500 focus:border-brand-500 transition" title="Target LLM di destinazione" aria-haspopup="listbox" aria-expanded="false" disabled>
+                                    <span id="llmTargetIcon" class="w-4 h-4 flex items-center justify-center shrink-0 text-slate-400"><i class="fa-solid fa-globe text-[10px]"></i></span>
+                                    <span id="llmTargetLabel" class="truncate min-w-0">Target LLM...</span>
+                                    <i class="fa-solid fa-chevron-down text-[8px] text-slate-400 ml-auto shrink-0"></i>
+                                </button>
+                                <div id="llmTargetMenu" role="listbox" class="hidden absolute top-full mt-1 left-0 min-w-full max-h-64 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 py-1"></div>
+                            </div>
                             <button id="llmSendBtn" onclick="sendToLLM()" class="hidden text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1.5" title="Apri il prompt compresso nel target selezionato" disabled>
                                 <i class="fa-solid fa-paper-plane text-[10px]"></i>
                                 <span class="hidden sm:inline">Invia</span>

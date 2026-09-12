@@ -7,7 +7,7 @@ window.LLMTargets = (function () {
         'GOOGLE-SEARCH:  https://www.google.com/search?udm=50&q=IL_TUO_PROMPT',
         'PERPLEXITY:     https://www.perplexity.ai/search?q=IL_TUO_PROMPT',
         'CLAUDE:         https://claude.ai/new?q=IL_TUO_PROMPT',
-        'BING_AI:        https://www.bing.com/search?q=IL_TUO_PROMPT&rdr=1&mturn=1'
+        'DUCK_AI:        https://duck.ai/chat?q=IL_TUO_PROMPT'
     ].join('\n');
 
     let targets = [];
