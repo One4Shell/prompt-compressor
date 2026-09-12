@@ -1115,12 +1115,13 @@ async function copyGlyphImage() {
 }
 
 const LLM_ICONS = {
+    duck_ai: { slug: 'duckduckgo', color: 'DE5833' },
     brave: { slug: 'brave', color: 'FB542B' },
     chatgpt: { src: 'https://api.iconify.design/logos:openai-icon.svg', filter: 'brightness(0) invert(1)' },
     'google-search': { slug: 'google', color: '4285F4' },
     perplexity: { slug: 'perplexity', color: '20808A' },
-    claude: { slug: 'anthropic', color: 'D97757' },
-    duck_ai: { slug: 'duckduckgo', color: 'DE5833' },
+    claude: { slug: 'anthropic', color: 'D97757' }
+    
 };
 
 let llmTargetValue = '';

@@ -2,12 +2,13 @@ window.LLMTargets = (function () {
     const PLACEHOLDER = 'IL_TUO_PROMPT';
 
     const DEFAULT_TEXT = [
+        'DUCK_AI:        https://duck.ai/chat?q=IL_TUO_PROMPT',
         'BRAVE:          https://search.brave.com/ask?q=IL_TUO_PROMPT',
         'CHATGPT:        https://chatgpt.com/?q=IL_TUO_PROMPT',
         'GOOGLE-SEARCH:  https://www.google.com/search?udm=50&q=IL_TUO_PROMPT',
         'PERPLEXITY:     https://www.perplexity.ai/search?q=IL_TUO_PROMPT',
-        'CLAUDE:         https://claude.ai/new?q=IL_TUO_PROMPT',
-        'DUCK_AI:        https://duck.ai/chat?q=IL_TUO_PROMPT'
+        'CLAUDE:         https://claude.ai/new?q=IL_TUO_PROMPT'
+        
     ].join('\n');
 
     let targets = [];
