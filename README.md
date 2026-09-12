@@ -16,6 +16,7 @@ L'elaborazione è **100% client-side**: il testo non lascia mai il browser.
 - Visualizzatore diff basato su **Myers O(ND)**: parole rimosse evidenziate con barrato rosso
 - Dizionari di compressione in italiano e inglese (cortesie, articoli, preposizioni, pronomi, intensificatori)
 - Regole personalizzate (parole/termini da rimuovere)
+- **Invia a LLM**: apre il prompt compresso in una nuova scheda del browser su un target selezionabile (BRAVE, CHATGPT, GOOGLE-SEARCH, PERPLEXITY, CLAUDE, BING_AI), costruendo l'URL dal file `LLM-url`
 - 9 prompt demo precaricati
 - **Persistenza dello stato** in `localStorage` (sidebar, opzioni, lingua, parole personalizzate, modello costi)
 - Sidebar collapsible, tema scuro, layout responsive (desktop affiancato, mobile a tab). Interruttori stile Material Design: le opzioni dei moduli disattivati vengono collassate, opacizzate e rese non interattive
@@ -163,6 +164,25 @@ Il badge accanto alle metriche indica il metodo di conteggio: **BPE** (reale, vi
 
 Nota: il pulsante Incolla richiede un contesto sicuro (HTTPS o `localhost`). In assenza di contesto sicuro, incolla manualmente con la scorciatoia di sistema.
 
+## Invio a un LLM
+
+Accanto al pulsante **Copia** del pannello Output c'è un selettore del target e il pulsante **Invia**: apre il prompt compresso (l'output testuale della pipeline, anche se OmniGlyph è attivo) in una **nuova scheda** del browser, inserendo il testo come parametro `q` dell'URL del target scelto.
+
+I target sono definiti nel file `LLM-url` nel formato `NOME: URL`, con placeholder `IL_TUO_PROMPT` (sostituito con il prompt URL-encoded):
+
+```
+BRAVE:          https://search.brave.com/ask?q=IL_TUO_PROMPT
+CHATGPT:        https://chatgpt.com/?q=IL_TUO_PROMPT
+GOOGLE-SEARCH:  https://www.google.com/search?udm=50&q=IL_TUO_PROMPT
+PERPLEXITY:     https://www.perplexity.ai/search?q=IL_TUO_PROMPT
+CLAUDE:         https://claude.ai/new?q=IL_TUO_PROMPT
+BING_AI:        https://www.bing.com/search?q=IL_TUO_PROMPT&rdr=1&mturn=1
+```
+
+- Modificando `LLM-url` e servendo la cartella con un server HTTP (es. `python3 -m http.server`), il file viene riletto a ogni caricamento dell'app. Aprendo `index.html` da `file://` (dove il `fetch` è bloccato da CORS) vengono usati i target di default incorporati, equivalenti a quelli sopra.
+- Il target selezionato viene salvato in `localStorage` e ripristinato al riavvio.
+- Il pulsante **Invia** resta disabilitato finché non c'è output compresso.
+
 ## Avvio
 
 Nessuna installazione richiesta. Apri direttamente il file:
@@ -199,6 +219,7 @@ prompt-compressor/
     ├── toon.js       # Encoder JSON→TOON (spec TOON v4.1)
     ├── omniglyph.js  # Renderer testo→PNG per modelli vision (Anthropic): minifica JSON nel PNG, densità auto
     ├── diff.js       # Diff Myers O(ND) + word diff
+    ├── llmTargets.js # Target LLM (file LLM-url) + costruzione URL per l'invio
     └── app.js        # Orchestrazione, metriche, costi, stato
 ```
 

@@ -732,6 +732,7 @@ function updateMetrics(raw, comp) {
     $('savedCost').innerText = `$${savedCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })}`;
     updateInputCount(raw);
     $('outputCharCount').innerText = useImg ? `${glyphState.pages.length} pag` : `${comp.length} car.`;
+    updateLLMSendState();
 }
 
 function addBadge(container, label, colorClasses) {
@@ -1113,6 +1114,54 @@ async function copyGlyphImage() {
     }
 }
 
+function initLLMTargets() {
+    const select = $('llmTargetSelect');
+    const sendBtn = $('llmSendBtn');
+    if (!select || !sendBtn) return;
+    LLMTargets.load().then(() => {
+        const targets = LLMTargets.getTargets();
+        if (!targets.length) return;
+        select.innerHTML = '';
+        targets.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.name;
+            opt.textContent = t.name;
+            select.appendChild(opt);
+        });
+        let saved = null;
+        try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}').llmTarget; } catch (e) { saved = null; }
+        if (saved && targets.some(t => t.name === saved)) select.value = saved;
+        select.classList.remove('hidden');
+        select.disabled = false;
+        sendBtn.classList.remove('hidden');
+        sendBtn.disabled = false;
+        updateLLMSendState();
+    });
+}
+
+function updateLLMSendState() {
+    const btn = $('llmSendBtn');
+    if (!btn || btn.classList.contains('hidden')) return;
+    btn.disabled = !$('compressedOutput').value;
+}
+
+function sendToLLM() {
+    const outputText = $('compressedOutput').value;
+    if (!outputText) {
+        showToast('Nessun output compresso da inviare', true);
+        return;
+    }
+    const select = $('llmTargetSelect');
+    const url = LLMTargets.buildUrl(select.value, outputText);
+    if (!url) {
+        showToast('Target LLM non configurato correttamente', true);
+        return;
+    }
+    saveState();
+    window.open(url, '_blank', 'noopener');
+    showToast(`Aperto in nuova scheda: ${select.value}`);
+}
+
 function fallbackCopyText(text) {
     const textArea = document.createElement('textarea');
     textArea.value = text;
@@ -1182,6 +1231,8 @@ function saveState() {
         const el = $(id);
         if (el) state[id] = el.value;
     });
+    const llmSel = $('llmTargetSelect');
+    if (llmSel) state.llmTarget = llmSel.value;
     try {
         localStorage.setItem(STORE_KEY, JSON.stringify(state));
     } catch (e) {}
@@ -1242,6 +1293,7 @@ function restoreState() {
 
 window.addEventListener('DOMContentLoaded', () => {
     syncPresetLocation();
+    initLLMTargets();
     const state = restoreState();
     initDragAndDrop();
     const rawInput = $('rawInput');
